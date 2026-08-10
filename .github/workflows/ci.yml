@@ -33,12 +33,12 @@ jobs:
 
       - name: Restore dependencies
         if: steps.dotnet_check.outputs.found == 'true'
-        run: dotnet restore
+        run: dotnet restore backend/SEAL_Backend.slnx
 
       - name: Build
         if: steps.dotnet_check.outputs.found == 'true'
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build backend/SEAL_Backend.slnx --no-restore --configuration Release
 
       - name: Test
         if: steps.dotnet_check.outputs.found == 'true'
-        run: dotnet test --no-build --configuration Release --verbosity normal
+        run: dotnet test backend/SEAL_Backend.slnx --no-build --configuration Release --verbosity normal

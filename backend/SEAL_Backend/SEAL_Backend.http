@@ -1,0 +1,6 @@
+@SEAL_Backend_HostAddress = http://localhost:5138
+
+GET {{SEAL_Backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
