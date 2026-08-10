@@ -1,0 +1,26 @@
+# [DB-DOCKER] Postgres local dung chung ca nhom — cung 1 image/version, tranh
+# loi "chay duoc tren may minh nhung khong chay duoc tren may ban".
+#
+# Cach dung:
+#   1. docker compose -f database/docker-compose.yml up -d
+#   2. psql -h localhost -p 5432 -U postgres -d seal_dev -f database/migrations/001_seal_schema.sql
+#   3. psql -h localhost -p 5432 -U postgres -d seal_dev -f database/seed/001_seed_roles.sql
+#
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: seal-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: seal_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - seal_pg_data:/var/lib/postgresql/data
+
+volumes:
+  seal_pg_data:
