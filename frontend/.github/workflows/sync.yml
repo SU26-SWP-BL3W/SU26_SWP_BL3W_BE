@@ -1,0 +1,25 @@
+name: Sync to Personal Repo
+on:
+  push:
+    branches:
+      - main
+jobs:
+  git-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Push to Personal Mirror Repo
+        env:
+          TOKEN: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        run: |
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "actions@github.com"
+          printf "machine github.com login x-access-token password %s\n" "$TOKEN" > ~/.netrc
+          chmod 600 ~/.netrc
+          git remote add mirror https://github.com/baohg170524/my-react-app-mirror.git
+          git push --force mirror main
+          rm ~/.netrc
