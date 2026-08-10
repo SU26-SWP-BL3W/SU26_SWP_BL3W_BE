@@ -37,3 +37,8 @@ Behavior:
 - `dev` — integration branch for daily work
 
 Open PRs into `dev`; promote `dev → main` on release.
+
+## CI verification
+
+This line confirms the branch → PR → CI flow works end to end: a change on
+`test/ci-verify` opens a PR into `dev`, and GitHub Actions runs automatically.
