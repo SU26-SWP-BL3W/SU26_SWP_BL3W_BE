@@ -38,25 +38,29 @@ backend/
 
 ## 4. Khung Frontend (`SU26_SWP_BL3W_FE/`)
 
-Next.js 16 (App Router) + TypeScript-only + Tailwind v4 + React Query, tổ chức theo **MVVM**:
+Next.js 16 (App Router) + TypeScript-only + Tailwind v4 + React Query, tổ chức theo **MVVM 4 lớp** (View → ViewModel → Repository → Service):
 
 ```
 src/
-├── app/          # Route Next.js — CHỈ import và render 1 View tương ứng, không chứa logic
-├── views/        # Màn hình — ghép ViewModel + component lại thành 1 trang hoàn chỉnh
-├── viewModels/   # 1 custom hook / màn hình — chứa toàn bộ state + logic, View chỉ đọc ra render
-├── models/       # apiClient.ts (axios, tự gắn token + tự refresh khi hết hạn) + types.ts (BaseResponse, ApiError)
-├── components/ui/# UI dùng chung (Button, Card, Input, Badge) — mọi feature dùng lại, KHÔNG tự định nghĩa Button riêng
-├── providers/    # QueryProvider (React Query)
-└── styles/       # tokens.css — bảng màu/spacing dùng chung (đang là placeholder, chờ thiết kế UI thật)
+├── app/            # Route Next.js — CHỈ import và render 1 View tương ứng, không chứa logic
+├── views/          # Màn hình — ghép ViewModel + component lại thành 1 trang hoàn chỉnh
+├── viewModels/     # 1 custom hook / màn hình — chứa state + logic, gọi Repository (KHÔNG gọi thẳng Service)
+├── repositories/   # Cache ngắn hạn, retry, chuẩn hoá dữ liệu thô → domain model; gọi xuống Service
+├── models/         # Service: apiClient.ts (axios, tự gắn token + tự refresh) + types.ts (BaseResponse, ApiError)
+├── components/ui/  # UI dùng chung (Button, Card, Input, Badge) — mọi feature dùng lại, KHÔNG tự định nghĩa Button riêng
+├── providers/      # QueryProvider (React Query)
+└── styles/         # tokens.css — bảng màu/spacing dùng chung (đang là placeholder, chờ thiết kế UI thật)
 ```
+
+4 lớp tương ứng đúng theo mô hình MVVM chuẩn (View/ViewModel/Repository/Service) — Repository lo cache/retry/chuẩn hoá dữ liệu, Service (`models/apiClient.ts`) chỉ lo gọi API thô. Xem ví dụ mẫu đầy đủ 4 lớp: `views/HomeView.tsx` → `viewModels/useBackendHealthViewModel.ts` → `repositories/healthRepository.ts` → axios/`models/apiClient.ts`.
 
 **Quy tắc bắt buộc** (để tránh lặp lại tình trạng "mò kiếm code" của FE cũ — 2 hệ auth song song, 2 API client, code cũ chồng code mới):
 1. Chỉ TypeScript (`.tsx`/`.ts`), không `.jsx`/`.js`.
-2. 1 API client duy nhất: `models/apiClient.ts` — mọi lời gọi API đi qua đây.
-3. Mỗi màn hình = 1 ViewModel (hook `useXxxViewModel`) + 1 View (`XxxView.tsx`) + 1 route mỏng trong `app/` render View đó. Xem ví dụ mẫu: `viewModels/useBackendHealthViewModel.ts` + `views/HomeView.tsx` + `app/page.tsx`.
-4. UI dùng chung chỉ sống ở `components/ui/`.
-5. `viewModels/useAuth.ts` hiện chỉ đọc phiên đăng nhập đã lưu (chưa có login/register vì Backend chưa có endpoint Auth) — flow Auth thêm mutation hook (`useLogin`, `useRegister`...) vào `models/`/`viewModels/` riêng khi build, không sửa cấu trúc chung này.
+2. 1 API client duy nhất: `models/apiClient.ts` — mọi lời gọi API đi qua đây (trực tiếp hoặc qua Repository).
+3. Mỗi màn hình = 1 ViewModel (hook `useXxxViewModel`) + 1 View (`XxxView.tsx`) + 1 route mỏng trong `app/` render View đó.
+4. Mỗi resource/domain có 1 Repository riêng trong `repositories/` (vd `teamRepository.ts`, `authRepository.ts`) — **ViewModel không import `models/apiClient.ts` trực tiếp**, luôn đi qua Repository.
+5. UI dùng chung chỉ sống ở `components/ui/`.
+6. `viewModels/useAuth.ts` hiện chỉ đọc phiên đăng nhập đã lưu (chưa có login/register vì Backend chưa có endpoint Auth) — flow Auth thêm Repository (`repositories/authRepository.ts`) + mutation hook (`useLogin`, `useRegister`...) khi build, không sửa cấu trúc chung này.
 
 ## 5. Đã kiểm chứng chạy thật
 
