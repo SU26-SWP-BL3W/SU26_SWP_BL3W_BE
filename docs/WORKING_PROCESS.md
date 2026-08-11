@@ -63,7 +63,19 @@ src/
 - Backend: `dotnet build backend/SEAL_Backend.slnx` xanh; chạy `dotnet run --project backend/SEAL_Backend` lên thật, `GET /health` trả `{"status":"ok"}`, `/swagger` load được. Migration `InitialCreate` sinh ra khớp đúng 19 bảng với schema SQL đã có sẵn.
 - Frontend: `npm run build` xanh; chạy `npm run dev`, trang chủ gọi thật `GET /health` sang Backend đang chạy và hiển thị kết quả — xác nhận 2 chiều FE⇄BE hoạt động.
 
-## 6. Việc còn để ngỏ cho từng flow
+## 6. Cách tạo/cập nhật sơ đồ business flow cho đúng
+
+Khi vẽ hoặc sửa 1 flow, tra cứu theo đúng THỨ TỰ ưu tiên sau — nguồn ở trên luôn thắng nguồn ở dưới nếu có mâu thuẫn:
+
+1. **Người trong nhóm xác nhận trực tiếp** (vd "EC duyệt hồ sơ chứ không phải Admin") — luôn đúng nhất vì đó là quyết định nghiệp vụ thật của nhóm, kể cả khi khác với tài liệu hay code cũ.
+2. **Đề bài gốc / bảng mô tả assignment** (bảng chức năng chính do giảng viên/PDP đưa — liệt kê vai trò, chức năng chính, entity) — nguồn chuẩn hoá ban đầu.
+3. **Audit code cũ đã kiểm chứng** (vd `FLOW_1_AUTH_NGUOIDUNG.md`, các file `FLOW_2..5_*.md`) — mô tả ĐÚNG hành vi code cũ thật sự chạy, đã đối chiếu handler/controller cụ thể, không phải suy đoán. Coi đây là "sự thật hiện tại", không phải "ý đồ đúng" — code cũ có thể có bug.
+4. **Sơ đồ cũ đã vẽ trước đó** (`MainFlow/*.drawio.png`, `SwimDigram/*.drawio`) — chỉ tham khảo bản nháp, có thể đã lỗi thời so với 3 nguồn trên.
+5. **Suy luận hợp lý khi thiếu nguồn** — chỉ dùng khi không có gì ở trên, và phải đánh dấu rõ "🟡 chờ review" để người có domain knowledge xác nhận lại.
+
+Quy trình: gom nguồn theo thứ tự trên → liệt kê actor + trình tự bước + điểm quyết định (Có/Không) → vẽ nháp, đánh dấu chờ review → nhận góp ý sửa trực tiếp theo đúng góp ý (nguồn #1 luôn thắng) → cập nhật lại.
+
+## 7. Việc còn để ngỏ cho từng flow
 
 - Backend khung **chưa có bất kỳ Controller/Feature nào** (kể cả Auth) — mỗi flow tự thêm trên nhánh riêng của mình.
 - Frontend khung **chưa có route/màn hình thật nào** ngoài trang mẫu kiểm tra kết nối — UI thật sẽ thiết kế lại từ đầu.
