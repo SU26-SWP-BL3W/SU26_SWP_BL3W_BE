@@ -1,0 +1,46 @@
+services:
+  - type: web
+    name: seal-bl3w-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: ASPNETCORE_ENVIRONMENT
+        value: Production
+      - key: ASPNETCORE_URLS
+        value: http://+:8080
+      - key: Database__Ip
+        fromDatabase:
+          name: seal-bl3w-db
+          property: host
+      - key: Database__Port
+        fromDatabase:
+          name: seal-bl3w-db
+          property: port
+      - key: Database__User
+        fromDatabase:
+          name: seal-bl3w-db
+          property: user
+      - key: Database__Password
+        fromDatabase:
+          name: seal-bl3w-db
+          property: password
+      - key: Database__Database
+        fromDatabase:
+          name: seal-bl3w-db
+          property: database
+      - key: JwtSettings__SecretKey
+        generateValue: true
+      - key: JwtSettings__Issuer
+        value: SealBL3W
+      - key: JwtSettings__Audience
+        value: SealBL3W
+      - key: FrontendUrl
+        sync: false
+
+databases:
+  - name: seal-bl3w-db
+    plan: free
+    postgresMajorVersion: 15

@@ -65,3 +65,5 @@ secrets.json
 *.log
 tmp/
 temp/
+docs/swimlane/.$*.dtmp
+docs/swimlane/.$*.bkp
