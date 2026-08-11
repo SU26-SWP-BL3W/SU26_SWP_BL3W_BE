@@ -1,0 +1,55 @@
+## Thư mục build đầu ra của dự án C#
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Bb]in/
+[Oo]bj/
+
+## Thư mục ẩn chứa cache của Visual Studio 2022 (Rất nặng, bắt buộc phải chặn)
+.vs/
+
+## Thư mục cấu hình IDE JetBrains (Rider/IntelliJ) - riêng từng máy, không commit
+.idea/
+
+## File cấu hình cá nhân của người lập trình (gây xung đột khi làm việc nhóm)
+*.user
+*.userosscache
+*.suo
+*.sln.docstates
+
+## File kết quả chạy kiểm thử (Unit Test) và nhật ký build
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+*.visualstudio.diagnostics.view*
+
+## Thư mục chứa thư viện nâng cấp tự động (NuGet)
+packages/
+*.nuget.props
+*.nuget.targets
+
+## File chẩn đoán và hiệu năng của VS 2022
+*.prospect
+*.hprof
+*.pyc
+
+## File cấu hình môi trường chứa mật khẩu/chuỗi kết nối (Bảo mật)
+appsettings.Development.json
+secrets.json
+.env
+
+## File rác của hệ điều hành
+.DS_Store
+Thumbs.db
+
+## EF Core Migrations
+**/Migrations/
+
+.trellis/
+
+.claude/
+.codegraph/
+.cursor/
+AGENTS.md

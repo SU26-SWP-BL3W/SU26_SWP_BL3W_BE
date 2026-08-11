@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="SEAL.Application/SEAL_Application.csproj" />
+  <Project Path="SEAL.Domain/SEAL_Domain.csproj" />
+  <Project Path="SEAL.Infrastructure/SEAL_Infrastructure.csproj" />
+  <Project Path="SEAL_Backend/SEAL_Backend.csproj" />
+  <Project Path="SEAL.Tests.Application/SEAL.Tests.Application.csproj" />
+</Solution>

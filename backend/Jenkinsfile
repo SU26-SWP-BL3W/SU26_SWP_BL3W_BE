@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+
+    environment {
+        REGISTRY = 'docker.io/baohgse182507'
+        IMAGE_NAME = 'seal-backend-api'
+        IMAGE_TAG = "${BUILD_NUMBER}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Build & Test') {
+            steps {
+                // Restore và build code .NET
+                sh 'dotnet restore SEAL_Backend/SEAL_Backend.csproj'
+                sh 'dotnet build SEAL_Backend/SEAL_Backend.csproj --configuration Release'
+            }
+        }
+
+        stage('Docker Build & Push') {
+            steps {
+                // Build docker image
+                sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} -t ${REGISTRY}/${IMAGE_NAME}:latest ."
+                
+                // Cần cấu hình credential id 'dockerhub-creds' trên Jenkins chứa username và password DockerHub
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    sh "docker login -u ${USER} -p ${PASS}"
+                    sh "docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
+                    sh "docker push ${REGISTRY}/${IMAGE_NAME}:latest"
+                }
+            }
+        }
+
+        stage('Deploy via Portainer API') {
+    steps {
+        sh '''
+            curl -X POST http://103.179.173.69:9000/api/auth \
+                -H "Content-Type: application/json" \
+                -d '{"username":"baohgse182507","password":"hihihidongu@@"}' \
+                -o /tmp/token.json
+            
+            TOKEN=$(cat /tmp/token.json | grep -o '"jwt":"[^"]*' | cut -d'"' -f4)
+            
+            STACK_ID=$(curl -s http://103.179.173.69:9000/api/stacks \
+                -H "Authorization: Bearer $TOKEN" | grep -o '"Id":[0-9]*' | head -1 | cut -d: -f2)
+            
+            curl -X POST "http://103.179.173.69:9000/api/stacks/$STACK_ID/git/redeploy" \
+                -H "Authorization: Bearer $TOKEN" \
+                -H "Content-Type: application/json" \
+                -d '{"pullImage":true}'
+        '''
+    }
+}
+    }
+}
