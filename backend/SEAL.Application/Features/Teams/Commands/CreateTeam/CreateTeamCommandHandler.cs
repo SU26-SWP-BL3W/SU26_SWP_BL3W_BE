@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][CreateTeam] Truong nhom tao doi thi moi trong 1 su kien, doi o trang thai Forming (dang lap).
+
 using MediatR;
 using SEAL_Application.Features.Teams.Commands.CreateTeam.Models;
 using SEAL_Application.Interfaces;
