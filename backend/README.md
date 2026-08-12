@@ -8,6 +8,7 @@
 - [Dependency Injection Pattern](#dependency-injection-pattern)
 - [Project Structure](#project-structure)
 - [System Operation Diagram](#system-operation-diagram)
+- [Request Walkthrough — Which Class Does What](#request-walkthrough--which-class-does-what)
 - [Implemented vs Planned Flows](#implemented-vs-planned-flows)
 - [User Flow (Student / Team)](#user-flow-student--team)
 - [Setup & Run](#setup--run)
@@ -197,6 +198,22 @@ sequenceDiagram
     C-->>FE: BaseResponse<T> { data, message, statusCode, success } as JSON
     Note over MW: any unhandled exception at any step is caught here and converted to the same BaseResponse shape
 ```
+
+## Request Walkthrough — Which Class Does What
+
+The diagrams above show the *shape* of the pipeline; this section names the *actual classes*, using a real, already-implemented endpoint — `POST /api/SubmitResults` (a team submitting their work). Every other endpoint in the app follows this exact same 7-step chain, only the class names change.
+
+| # | Class (file) | What it does | Hands off to |
+|---|---|---|---|
+| 1 | **`SubmitResultsController.Create`**<br>`SEAL_Backend/Controllers/SubmitResultsController.cs:48-52` | Declares the route (`[HttpPost]`) and required role (`[EventRoleAuthorize(EventCoordinator, TeamLeader)]`). Reads the JSON body into `CreateSubmitResultRequestModel`. **Contains zero business logic.** | Wraps the model into `new CreateSubmitResultCommand { Model = requestModel }` and calls `await _mediator.Send(command)` |
+| 2 | **`CreateSubmitResultCommand`**<br>`SEAL.Application/.../CreateSubmitResult/CreateSubmitResultCommand.cs` | Just a data-carrier (`IRequest<Result<CreateSubmitResultResponseModel>>`). No logic — it's the "envelope" MediatR uses to find the matching handler. | MediatR's internal routing (by generic type) |
+| 3 | **`CreateSubmitResultCommandHandler.Handle`**<br>`SEAL.Application/.../CreateSubmitResult/CreateSubmitResultCommandHandler.cs` | **This is the class that actually does the work.** Validates the Team exists and the caller is its TeamLeader/EC, checks `Team.Status == Registered`, checks the Track/Round exist and belong to the same Event, checks the submission window (`Track.EndDate ?? Round.EndDate`), blocks duplicate submissions per Track, handles the create-race edge case. | Calls `_unitOfWork.GetRepository<SubmitResult>().AddAsync(...)` then `_unitOfWork.SaveChangesAsync(...)` |
+| 4 | **`UnitOfWork` / `GenericRepository<SubmitResult>`**<br>`SEAL.Infrastructure/UnitOfWork/`, `Repositories/` | Translates the repository call into EF Core operations against `DatabaseContext`, wraps everything in one transaction/change-tracker so several repository calls in the same handler commit together. | Issues SQL to PostgreSQL, returns tracked entities back to the handler |
+| 5 | *(back in)* **`CreateSubmitResultCommandHandler`** | Builds a `CreateSubmitResultResponseModel` from the saved entity and returns `Result<CreateSubmitResultResponseModel>.Success(...)` — or, on any validation failure above, a typed error such as `BaseException.BadRequestInvaildInputResponse(...)` / `.ForbiddenException(...)`. | Returned up through MediatR to the Controller that called `Send(...)` |
+| 6 | *(back in)* **`SubmitResultsController.Create`** | `return OkResponse(result);` — **`OkResponse<T>(Result<T>?)`** is defined once in **`CustomControllerBase`**<br>`SEAL_Backend/Helpers/CustomControllerBase.cs:59-84` (every Controller inherits from it). It unwraps `Result<T>`: success → HTTP 200 with `result.Value` as `data`; failure → HTTP `result.StatusCode` (400/401/403/404/…) with the error message. | Serialized as the `BaseResponse<T>` JSON envelope `{ data, message, statusCode, success }` sent to the client |
+| — | **`GlobalExceptionMiddleware`**<br>`SEAL_Backend/Middlewares/GlobalExceptionMiddleware.cs`, wraps the whole pipeline (`Program.cs:135`) | Safety net, not part of the normal chain: if any class above throws an exception that isn't a handled `BaseException`, this catches it before it reaches the client and converts it to the same `BaseResponse` shape with a 500 status. | The client always gets the same JSON shape, success or failure, no raw .NET stack traces |
+
+**On the FE side**, this same endpoint is called from `submissionsApi.create` → `useCreateSubmission` → the `SubmissionTab` form's submit handler (see the old frontend's `src/features/submissions/api/submissions.ts:47-50` and `hooks/useSubmissions.ts:20-26` for the reference implementation — this repo's own frontend, [`SU26_SWP_BL3W_FE`](https://github.com/SU26-SWP-BL3W/SU26_SWP_BL3W_FE), doesn't have the Submissions screen built yet).
 
 ## Implemented vs Planned Flows
 
