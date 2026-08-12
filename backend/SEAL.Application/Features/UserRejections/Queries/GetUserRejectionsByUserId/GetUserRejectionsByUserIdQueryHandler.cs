@@ -44,3 +44,6 @@ namespace SEAL_Application.Features.UserRejections.Queries.GetUserRejectionsByUs
         }
     }
 }
+
+
+

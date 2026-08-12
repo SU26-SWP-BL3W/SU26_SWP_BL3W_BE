@@ -46,3 +46,4 @@ namespace SEAL_Application.Features.UserRejections.Commands.UpdateUserRejection
         }
     }
 }
+

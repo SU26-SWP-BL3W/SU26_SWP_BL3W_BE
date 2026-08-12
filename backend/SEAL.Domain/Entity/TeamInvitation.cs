@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][Entity] TeamInvitation: loi moi tham gia doi gui cho 1 sinh vien.
+
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity.Enums;
 using System;

@@ -16,3 +16,4 @@ namespace SEAL_Application.Features.UserRejections.Queries.GetAllUserRejections
         public override HashSet<string> GetAllowedSortFields() => new(System.StringComparer.OrdinalIgnoreCase) { "CreatedTime", "UserId", "RejectedBy" };
     }
 }
+

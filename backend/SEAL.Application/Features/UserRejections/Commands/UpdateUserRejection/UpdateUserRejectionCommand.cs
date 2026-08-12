@@ -10,3 +10,4 @@ namespace SEAL_Application.Features.UserRejections.Commands.UpdateUserRejection
         public UpdateUserRejectionRequestModel Model { get; set; } = new UpdateUserRejectionRequestModel();
     }
 }
+

@@ -9,3 +9,4 @@ namespace SEAL_Application.Features.UserRejections.Commands.CreateUserRejection
         public CreateUserRejectionRequestModel Model { get; set; } = new CreateUserRejectionRequestModel();
     }
 }
+

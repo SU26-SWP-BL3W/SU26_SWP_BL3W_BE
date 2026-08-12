@@ -6,6 +6,13 @@
 		<ImplicitUsings>enable</ImplicitUsings>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<NoWarn>$(NoWarn);1591</NoWarn>
+		<!-- Server GC (mac dinh cua ASP.NET Core) cap phat 1 heap segment RIENG cho
+		     MOI logical CPU core ngay luc khoi dong -> de vuot RAM 512MB cua Render
+		     free tier, gay "Exited with status 139" truoc khi app kip chay xong
+		     Program.cs. Workstation GC + tat concurrent GC giam han memory footprint
+		     luc start, phu hop container RAM thap. -->
+		<ServerGarbageCollection>false</ServerGarbageCollection>
+		<ConcurrentGarbageCollection>false</ConcurrentGarbageCollection>
 	</PropertyGroup>
 
 	<ItemGroup>
