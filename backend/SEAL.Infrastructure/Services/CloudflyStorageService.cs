@@ -1,3 +1,5 @@
+// [FLOW3-NOPBAI][Storage] Implementation upload/xoa file len Cloudfly (S3-compatible).
+
 using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;

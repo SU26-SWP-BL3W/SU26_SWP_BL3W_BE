@@ -1,3 +1,5 @@
+// [FLOW3-NOPBAI][Controller] SubmitResultsController: toan bo endpoint nop/sua/xoa/xem bai nop cho Doi thi theo tung Hang muc.
+
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult;
