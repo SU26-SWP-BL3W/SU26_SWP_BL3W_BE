@@ -1,3 +1,5 @@
+// [FLOW3-NOPBAI][UpdateSubmitResult] Sua bai da nop trong luc Track con mo; chan sua sau khi vong thi da cong bo ket qua.
+
 
 using MediatR;
 using SEAL_Application.Features.SubmitResults.Commands.UpdateSubmitResult.Models;
