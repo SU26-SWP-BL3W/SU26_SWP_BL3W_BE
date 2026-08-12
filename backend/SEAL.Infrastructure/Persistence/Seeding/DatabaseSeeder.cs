@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System;
@@ -15,6 +16,29 @@ namespace SEAL_Infrastructure.Persistence.Seeding
             var context = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
             var logger = scope.ServiceProvider.GetRequiredService<ILogger<IDataSeeder>>();
             var seeders = scope.ServiceProvider.GetServices<IDataSeeder>();
+
+            int maxRetries = 10;
+            int delaySeconds = 3;
+            for (int i = 1; i <= maxRetries; i++)
+            {
+                try
+                {
+                    logger.LogInformation("Applying database migrations (Attempt {Attempt}/{MaxRetries})...", i, maxRetries);
+                    await context.Database.MigrateAsync();
+                    logger.LogInformation("Database migrations applied successfully.");
+                    break;
+                }
+                catch (Exception ex)
+                {
+                    if (i == maxRetries)
+                    {
+                        logger.LogError(ex, "Failed to apply database migrations after {MaxRetries} attempts.", maxRetries);
+                        throw;
+                    }
+                    logger.LogWarning("Database migration attempt {Attempt} failed. Retrying in {Delay} seconds...", i, delaySeconds);
+                    await Task.Delay(TimeSpan.FromSeconds(delaySeconds));
+                }
+            }
 
             logger.LogInformation("Starting database seeding...");
 

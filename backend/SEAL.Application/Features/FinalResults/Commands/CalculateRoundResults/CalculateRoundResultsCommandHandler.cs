@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 
 namespace SEAL_Application.Features.FinalResults.Commands.CalculateRoundResults
 {
-    public class CalculateRoundResultsCommandHandler : IRequestHandler<CalculateRoundResultsCommand, Result<CalculateRoundResultsResponseModel>>
+    public class CalculateRoundResultsCommandHandler : IRequestHandler<CalculateRoundResultsCommand, Result<List<CalculateRoundResultItemModel>>>
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
@@ -29,7 +29,7 @@ namespace SEAL_Application.Features.FinalResults.Commands.CalculateRoundResults
             _eventRoleChecker = eventRoleChecker;
         }
 
-        public async Task<Result<CalculateRoundResultsResponseModel>> Handle(CalculateRoundResultsCommand request, CancellationToken cancellationToken)
+        public async Task<Result<List<CalculateRoundResultItemModel>>> Handle(CalculateRoundResultsCommand request, CancellationToken cancellationToken)
         {
             // 0. CurrentUser bắt buộc
             var currentUserId = _currentUserService.UserId;
@@ -54,6 +54,8 @@ namespace SEAL_Application.Features.FinalResults.Commands.CalculateRoundResults
             {
                 return new BaseException.ForbiddenException("Chỉ EventCoordinator được tính kết quả vòng thi.");
             }
+
+
 
             // 2c. KHÔNG tính lại khi VÒNG SAU đã vận hành dựa trên kết quả hiện tại:
             //     đội đã nộp bài/đã có kết quả ở vòng sau mà kết quả vòng này đổi (IsAdvanced đổi)
@@ -99,6 +101,9 @@ namespace SEAL_Application.Features.FinalResults.Commands.CalculateRoundResults
                 .Where(sc => submissionIds.Contains(sc.SubmitResultId) && judgeRoleIds.Contains(sc.EventRoleId))
                 .ToListAsync(cancellationToken);
 
+            // 4b. Chưa cho tính kết quả nếu chưa ĐỦ giám khảo chấm:
+            //     mỗi bài nộp active phải được TẤT CẢ giám khảo được phân của track đó chấm.
+            //     (Tránh đội chưa được chấm/chấm thiếu bị tính FinalScore = 0 rồi loại oan.)
             var trackIds = submissions.Select(s => s.TrackId).Distinct().ToList();
             var nowUtc = System.DateTime.UtcNow;
             var judgeRoles = await _unitOfWork.GetRepository<EventRole>().Entities
@@ -107,157 +112,153 @@ namespace SEAL_Application.Features.FinalResults.Commands.CalculateRoundResults
                           && (er.ExpiredAt == null || er.ExpiredAt > nowUtc))   // bao gồm giám khảo vô thời hạn (null) hoặc chưa hết hạn
                 .ToListAsync(cancellationToken);
             var scoredPairs = scores.Select(sc => sc.EventRoleId + "|" + sc.SubmitResultId).ToHashSet();
+            int missingCount = 0;
+            foreach (var sub in submissions)
+            {
+                var trackJudges = judgeRoles.Where(j => j.TrackId == sub.TrackId).ToList();
+                if (trackJudges.Count == 0)
+                {
+                    missingCount++;   // bài nộp chưa được phân giám khảo nào
+                    continue;
+                }
+                missingCount += trackJudges.Count(j => !scoredPairs.Contains(j.Id + "|" + sub.Id));
+            }
+            if (missingCount > 0)
+            {
+                return BaseException.BadRequestInvaildInputResponse(
+                    $"Chưa thể tính kết quả: còn {missingCount} lượt chấm chưa hoàn tất (giám khảo chưa chấm hết bài được phân). Vui lòng đợi tất cả giám khảo chấm xong.");
+            }
 
+            // 5. Tính FinalScore mỗi đội = TRUNG BÌNH ĐIỂM TỪNG HẠNG MỤC của vòng (không phải trung bình
+            //    phẳng mọi phiếu chấm gộp lại). Vòng có N hạng mục -> đội phải có N điểm hạng mục để tính
+            //    trung bình đúng; hạng mục đã HẾT HẠN NỘP mà đội không nộp thì tính điểm hạng mục đó = 0
+            //    (không được bỏ qua/coi như "vô hình" — nếu không đội bỏ 1 hạng mục vẫn được tính y như
+            //    thể vòng chỉ có 1 hạng mục). Hạng mục CHƯA hết hạn mà đội chưa nộp thì chưa ép 0 (đội vẫn
+            //    còn quyền nộp), tạm bỏ qua khỏi phép tính lần này.
             var allRoundTracks = await _unitOfWork.GetRepository<Track>().GetQueryable()
                 .AsNoTracking()
                 .Where(t => t.RoundId == request.RoundId)
                 .ToListAsync(cancellationToken);
 
-            // 5. FIX: mỗi Team chỉ đăng ký và nộp bài ở ĐÚNG 1 Track cụ thể (xem Flow 3 — Team.EventId,
-            //    không có TrackId ở cấp đăng ký đội). Vì vậy điểm/xếp hạng/thăng vòng phải tính RIÊNG
-            //    theo TỪNG Track — KHÔNG được gộp trung bình mọi Track của cả vòng vào 1 điểm chung
-            //    (bản cũ làm vậy khiến đội chỉ thi 1 hạng mục bị tính 0 điểm oan cho hạng mục mình
-            //    không hề đăng ký). Round.AdvancementRule ("top:N"/"percent:P"/"minScore:X") áp dụng
-            //    RIÊNG cho bảng xếp hạng của từng Track, không áp cho 1 bảng gộp toàn vòng.
-            //
-            //    Đồng thời: 1 Track chưa đủ giám khảo chấm xong sẽ bị BỎ QUA (không chặn cả vòng như
-            //    bản cũ) — EC vẫn công bố được kết quả các Track đã sẵn sàng, không phải chờ Track
-            //    chậm nhất.
-            var resultModels = new List<CalculateRoundResultItemModel>();
-            var skippedTracks = new List<SkippedTrackModel>();
-            var tracksReady = new List<Track>();
-
-            foreach (var track in allRoundTracks)
-            {
-                var trackSubmissions = submissions.Where(s => s.TrackId == track.Id).ToList();
-                if (trackSubmissions.Count == 0)
+            var teamFinalScores = submissions
+                .Select(s => s.TeamId)
+                .Distinct()
+                .Select(teamId =>
                 {
-                    continue; // hạng mục này chưa có đội nào nộp bài — không có gì để tính
-                }
-
-                var trackJudges = judgeRoles.Where(j => j.TrackId == track.Id).ToList();
-                int missingCount = trackJudges.Count == 0
-                    ? trackSubmissions.Count // chưa được phân giám khảo nào
-                    : trackSubmissions.Sum(sub => trackJudges.Count(j => !scoredPairs.Contains(j.Id + "|" + sub.Id)));
-
-                if (missingCount > 0)
-                {
-                    skippedTracks.Add(new SkippedTrackModel
+                    var perTrackScores = new List<decimal>();
+                    foreach (var trk in allRoundTracks)
                     {
-                        TrackId = track.Id,
-                        TrackName = track.TrackName,
-                        MissingScoreCount = missingCount
-                    });
-                    continue;
-                }
+                        var sub = submissions.FirstOrDefault(s => s.TeamId == teamId && s.TrackId == trk.Id);
+                        if (sub != null)
+                        {
+                            // Điểm hạng mục = trung bình các phiếu chấm (mọi giám khảo) cho bài nộp đó.
+                            var subScores = scores.Where(sc => sc.SubmitResultId == sub.Id).ToList();
+                            if (subScores.Count > 0)
+                            {
+                                perTrackScores.Add(subScores.Average(sc => sc.TotalScore));
+                            }
+                        }
+                        else
+                        {
+                            var trackEffectiveEnd = trk.EndDate ?? round.EndDate;
+                            if (nowUtc > trackEffectiveEnd)
+                            {
+                                // Hết hạn nộp mà không nộp -> tính 0 cho hạng mục này (KHÔNG bỏ qua).
+                                perTrackScores.Add(0m);
+                            }
+                            // Chưa hết hạn -> chưa ép 0, tạm bỏ qua hạng mục này khỏi trung bình lần tính này.
+                        }
+                    }
 
-                tracksReady.Add(track);
-            }
+                    // Làm tròn 2 số NGAY khi tính để xếp hạng khớp với điểm hiển thị/lưu (tránh 7.004 vs 7.001
+                    // cùng hiện 7.00 nhưng khác hạng).
+                    decimal finalScore = perTrackScores.Count > 0
+                        ? System.Math.Round(perTrackScores.Average(), 2, System.MidpointRounding.AwayFromZero)
+                        : 0m;
+                    return new { TeamId = teamId, FinalScore = finalScore };
+                })
+                // 6. Xếp hạng theo điểm giảm dần (ThenBy TeamId để thứ tự ổn định khi đồng hạng)
+                .OrderByDescending(x => x.FinalScore)
+                .ThenBy(x => x.TeamId)
+                .ToList();
 
-            if (tracksReady.Count == 0)
-            {
-                return BaseException.BadRequestInvaildInputResponse(
-                    "Chưa hạng mục nào trong vòng đủ điều kiện tính kết quả (còn thiếu lượt chấm). Vui lòng đợi giám khảo chấm xong.");
-            }
-
-            // 6. Xoá kết quả cũ CỦA CÁC TRACK SẮP TÍNH LẠI (giữ nguyên kết quả track khác chưa sẵn sàng
-            //    từ lần tính trước, nếu có — không xoá sạch cả vòng như bản cũ).
-            var readyTrackIds = tracksReady.Select(t => t.Id).ToList();
+            // 7. Xóa kết quả cũ của vòng (tính lại từ đầu)
             var oldResults = await _unitOfWork.GetRepository<FinalResult>().Entities
-                .Where(f => f.RoundId == request.RoundId && f.TrackId != null && readyTrackIds.Contains(f.TrackId))
+                .Where(f => f.RoundId == request.RoundId)
                 .ToListAsync(cancellationToken);
             if (oldResults.Count > 0)
             {
                 await _unitOfWork.GetRepository<FinalResult>().DeleteRangeAsync(oldResults);
             }
 
-            // 7. Với MỖI Track đã sẵn sàng: xếp hạng riêng các đội đã nộp bài ở Track đó, áp
-            //    Round.AdvancementRule cho đúng bảng xếp hạng của Track đó.
-            foreach (var track in tracksReady)
+            // 7b. Cách thăng vòng: đọc Round.AdvancementRule ("top:N" | "percent:P" | "minScore:X").
+            //     Sai định dạng / để trống -> fallback về request.TopN (số nhập tay).
+            int totalTeams = teamFinalScores.Count;
+            int? cutoffRank = null;     // quy tắc 1 (top N) & 2 (top %) dùng ngưỡng HẠNG
+            decimal? minScore = null;   // quy tắc 3 (từ X điểm) dùng ngưỡng ĐIỂM
+            if (TryParseAdvancementRule(round.AdvancementRule, out var ruleType, out var ruleValue))
             {
-                var trackSubmissions = submissions.Where(s => s.TrackId == track.Id).ToList();
-
-                var teamScores = trackSubmissions
-                    .Select(sub =>
-                    {
-                        var subScores = scores.Where(sc => sc.SubmitResultId == sub.Id).ToList();
-                        // Làm tròn 2 số NGAY khi tính để xếp hạng khớp với điểm hiển thị/lưu.
-                        decimal finalScore = subScores.Count > 0
-                            ? System.Math.Round(subScores.Average(sc => sc.TotalScore), 2, System.MidpointRounding.AwayFromZero)
-                            : 0m;
-                        return new { sub.TeamId, FinalScore = finalScore };
-                    })
-                    .OrderByDescending(x => x.FinalScore)
-                    .ThenBy(x => x.TeamId) // đồng hạng -> thứ tự ổn định
-                    .ToList();
-
-                int totalTeamsInTrack = teamScores.Count;
-                int? cutoffRank = null;
-                decimal? minScore = null;
-                if (TryParseAdvancementRule(round.AdvancementRule, out var ruleType, out var ruleValue))
+                switch (ruleType)
                 {
-                    switch (ruleType)
-                    {
-                        case "top": cutoffRank = (int)ruleValue; break;
-                        case "percent": cutoffRank = (int)System.Math.Ceiling(totalTeamsInTrack * ruleValue / 100m); break;
-                        case "minscore": minScore = ruleValue; break;
-                        default: cutoffRank = request.TopN; break;
-                    }
+                    case "top":      cutoffRank = (int)ruleValue; break;
+                    case "percent":  cutoffRank = (int)System.Math.Ceiling(totalTeams * ruleValue / 100m); break;
+                    case "minscore": minScore = ruleValue; break;
+                    default:         cutoffRank = request.TopN; break;   // quy tắc lạ -> fallback
                 }
-                else
+            }
+            else
+            {
+                cutoffRank = request.TopN;   // không có rule -> dùng TopN nhập tay
+            }
+
+            // 8. Gán Rank + IsAdvanced và tạo FinalResult mới.
+            //    Xếp hạng kiểu thi đấu chuẩn (standard competition ranking "1-1-3"):
+            //    các đội bằng điểm cùng hạng; đội kế tiếp nhảy hạng theo số đội đứng trên.
+            //    IsAdvanced = Rank <= TopN -> nếu đồng hạng ngay ngưỡng top N thì mọi đội đồng hạng đó đều được thăng.
+            var resultModels = new List<CalculateRoundResultItemModel>();
+            int rank = 0;
+            int position = 0;
+            decimal? previousScore = null;
+            foreach (var item in teamFinalScores)
+            {
+                position++;
+                if (previousScore == null || item.FinalScore != previousScore.Value)
                 {
-                    cutoffRank = request.TopN;
+                    rank = position;
+                    previousScore = item.FinalScore;
                 }
 
-                // Xếp hạng kiểu thi đấu chuẩn (1-1-3): đội bằng điểm cùng hạng, đội kế tiếp nhảy hạng
-                // theo số đội đứng trên. IsAdvanced = Rank <= ngưỡng -> đồng hạng ngay ngưỡng đều được thăng.
-                int rank = 0;
-                int position = 0;
-                decimal? previousScore = null;
-                foreach (var item in teamScores)
+                var finalResult = new FinalResult
                 {
-                    position++;
-                    if (previousScore == null || item.FinalScore != previousScore.Value)
-                    {
-                        rank = position;
-                        previousScore = item.FinalScore;
-                    }
+                    TeamId = item.TeamId,
+                    RoundId = request.RoundId,
+                    // Gán luôn EventId (suy từ Round) để API đọc kết quả trả về đủ phạm vi, không bắt
+                    // client phải tra ngược qua RoundId. TrackId để null vì kết quả này tính theo VÒNG
+                    // (gộp mọi hạng mục của vòng), không phải kết quả riêng của một hạng mục.
+                    EventId = round.EventId,
+                    FinalScore = item.FinalScore,
+                    Rank = rank,
+                    IsAdvanced = minScore.HasValue
+                        ? item.FinalScore >= minScore.Value      // quy tắc 3: đội đạt từ X điểm trở lên
+                        : rank <= cutoffRank!.Value,             // quy tắc 1 (top N) & 2 (top %); đồng hạng ở vạch đều thăng
+                    // Tính kết quả tạo bản NHÁP (chưa công khai). EC/Admin rà soát rồi gọi Publish mới công bố.
+                    IsPublished = false
+                };
+                await _unitOfWork.GetRepository<FinalResult>().AddAsync(finalResult);
 
-                    var finalResult = new FinalResult
-                    {
-                        TeamId = item.TeamId,
-                        RoundId = request.RoundId,
-                        TrackId = track.Id, // kết quả RIÊNG theo từng hạng mục, không gộp cả vòng
-                        EventId = round.EventId,
-                        FinalScore = item.FinalScore,
-                        Rank = rank,
-                        IsAdvanced = minScore.HasValue
-                            ? item.FinalScore >= minScore.Value
-                            : rank <= cutoffRank!.Value,
-                        // Tính kết quả tạo bản NHÁP (chưa công khai). EC/Admin rà soát rồi gọi Publish mới công bố.
-                        IsPublished = false
-                    };
-                    await _unitOfWork.GetRepository<FinalResult>().AddAsync(finalResult);
-
-                    resultModels.Add(new CalculateRoundResultItemModel
-                    {
-                        FinalResultId = finalResult.Id,
-                        TeamId = finalResult.TeamId,
-                        TrackId = track.Id,
-                        FinalScore = finalResult.FinalScore,
-                        Rank = finalResult.Rank,
-                        IsAdvanced = finalResult.IsAdvanced
-                    });
-                }
+                resultModels.Add(new CalculateRoundResultItemModel
+                {
+                    FinalResultId = finalResult.Id,
+                    TeamId = finalResult.TeamId,
+                    FinalScore = finalResult.FinalScore,
+                    Rank = finalResult.Rank,
+                    IsAdvanced = finalResult.IsAdvanced
+                });
             }
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return new CalculateRoundResultsResponseModel
-            {
-                Results = resultModels,
-                SkippedTracks = skippedTracks
-            };
+            return resultModels;
         }
 
         /// <summary>
@@ -282,3 +283,7 @@ namespace SEAL_Application.Features.FinalResults.Commands.CalculateRoundResults
         }
     }
 }
+
+
+
+
