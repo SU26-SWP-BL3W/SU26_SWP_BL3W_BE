@@ -1,0 +1,28 @@
+using System;
+using System.Collections.Generic;
+
+namespace SEAL_Application.Features.Teams.Queries.GetMyTeam.Models
+{
+    public class MyTeamResponseModel
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public string EventId { get; set; } = string.Empty;
+        public string EventName { get; set; } = string.Empty;
+        public DateTimeOffset CreatedTime { get; set; }
+        public List<TeamMemberModel> Members { get; set; } = new List<TeamMemberModel>();
+    }
+
+    public class TeamMemberModel
+    {
+        public string UserId { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string? StudentCode { get; set; }
+        public string RoleName { get; set; } = string.Empty;
+        public bool IsApproved { get; set; }
+    }
+}
