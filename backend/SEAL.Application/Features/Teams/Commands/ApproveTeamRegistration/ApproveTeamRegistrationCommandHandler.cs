@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][ApproveTeamRegistration] EC duyet doi da chot danh sach, chuyen trang thai doi sang Registered.
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Interfaces;
