@@ -1,3 +1,5 @@
+// [FLOW3-NOPBAI][Storage] Interface dich vu luu tru file dung chung, phuc vu dinh kem file cho bai nop du thi.
+
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;

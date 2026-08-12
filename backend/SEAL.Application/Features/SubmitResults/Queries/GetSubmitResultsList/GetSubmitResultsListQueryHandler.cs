@@ -1,3 +1,5 @@
+// [FLOW3-NOPBAI][GetSubmitResultsList] Danh sach tat ca bai nop cua 1 Hang muc, dung cho Giam khao/EC xem tong quan de cham diem.
+
 using SEAL_Domain.Base;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
