@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][RespondTeamInvitation] Sinh vien duoc moi Dong y/Tu choi loi moi vao doi.
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Features.Teams.Commands.RespondTeamInvitation.Models;
