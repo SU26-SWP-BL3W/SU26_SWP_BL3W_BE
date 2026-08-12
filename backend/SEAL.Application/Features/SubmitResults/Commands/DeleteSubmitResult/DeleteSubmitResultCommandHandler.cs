@@ -1,3 +1,5 @@
+// [FLOW3-NOPBAI][DeleteSubmitResult] Doi thu hoi bai da nop truoc han chot, truoc khi co diem cham.
+
 using MediatR;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
