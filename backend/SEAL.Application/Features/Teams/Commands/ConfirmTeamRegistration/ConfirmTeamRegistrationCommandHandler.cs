@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][ConfirmTeamRegistration] Chot danh sach doi (yeu cau 3-5 thanh vien) de gui EC duyet, khoa danh sach thanh vien.
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Features.Teams.Commands.ConfirmTeamRegistration.Models;
