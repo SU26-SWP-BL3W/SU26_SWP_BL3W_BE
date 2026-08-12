@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][Entity] Team: doi thi (3-5 thanh vien) dang ky tham gia 1 su kien.
+
 ﻿using System;
 using System.Collections.Generic;
 using SEAL_Domain.Base;
