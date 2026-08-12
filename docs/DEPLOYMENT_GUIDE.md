@@ -22,7 +22,8 @@ Không cần VPS, không cần quản lý server thủ công. Dùng 2 nền tả
 1. Vào **https://render.com** → **Get Started** → đăng nhập bằng GitHub (tài khoản có quyền trên org `SU26-SWP-BL3W`).
 2. Bấm **New +** → **Blueprint**.
 3. Chọn repo **`SU26_SWP_BL3W_BE`** (org `SU26-SWP-BL3W`) → **Connect**.
-4. Render sẽ tự đọc file `backend/render.yaml` đã có sẵn trong repo (mình đã tạo) — hiện lên 2 thứ sẽ tạo: web service `seal-bl3w-backend` + database `seal-bl3w-db`. Bấm **Apply**.
+4. Render sẽ tự đọc file `render.yaml` ở gốc repo (mình đã tạo) — hiện lên 2 thứ sẽ tạo: web service `seal-bl3w-backend` + database `seal-bl3w-db`. Bấm **Apply**.
+   (`render.yaml` phải nằm ở gốc repo mới được Render tự nhận diện — trước đây từng đặt nhầm trong `backend/render.yaml` nên đã dời ra gốc.)
 5. Ở bước hỏi giá trị biến `FRONTEND_URL` (đánh dấu `sync: false` nên Render sẽ hỏi tay) — điền tạm URL Vercel có được ở Phần 1 bước 6 (vd `https://su26-swp-bl3w-fe.vercel.app`).
 6. Đợi Render build Docker image + khởi tạo Postgres (~3-5 phút lần đầu). Xong sẽ có URL dạng `https://seal-bl3w-backend.onrender.com`.
 7. Kiểm tra: mở `https://seal-bl3w-backend.onrender.com/health` → phải thấy `{"status":"ok"}`. Mở `/swagger` để xem API docs.
