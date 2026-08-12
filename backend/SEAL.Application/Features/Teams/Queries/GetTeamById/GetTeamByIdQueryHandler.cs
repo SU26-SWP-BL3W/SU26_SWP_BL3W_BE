@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][GetTeamById] Xem chi tiet 1 doi kem danh sach thanh vien; an email/ma SV voi nguoi ngoai doi.
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Features.Teams.Queries.GetTeamById.Models;
