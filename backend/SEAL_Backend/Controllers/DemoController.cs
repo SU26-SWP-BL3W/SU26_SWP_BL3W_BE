@@ -16,6 +16,7 @@ namespace SEAL_Backend.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [AdminAuthorize]
     public class DemoController : CustomControllerBase
     {
         private readonly IMediator _mediator;

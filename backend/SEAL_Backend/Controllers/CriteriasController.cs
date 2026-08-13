@@ -65,7 +65,7 @@ namespace SEAL_Backend.Controllers
         }
 
         /// <summary>
-        /// Xóa tiêu chí (Soft Delete). Chỉ Admin hệ thống mới được phép.
+        /// Xóa tiêu chí (xóa vĩnh viễn). Chỉ Admin hệ thống mới được phép.
         /// </summary>
         /// <param name="id">ID của tiêu chí cần xóa.</param>
         /// <returns>Kết quả thực hiện.</returns>

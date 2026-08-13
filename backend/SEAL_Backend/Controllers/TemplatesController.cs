@@ -67,7 +67,7 @@ namespace SEAL_Backend.Controllers
         }
 
         /// <summary>
-        /// Xóa một mẫu tiêu chí (Soft Delete).
+        /// Xóa một mẫu tiêu chí (xóa vĩnh viễn).
         /// </summary>
         /// <param name="id">ID của mẫu tiêu chí cần xóa.</param>
         /// <returns>Kết quả thực hiện.</returns>

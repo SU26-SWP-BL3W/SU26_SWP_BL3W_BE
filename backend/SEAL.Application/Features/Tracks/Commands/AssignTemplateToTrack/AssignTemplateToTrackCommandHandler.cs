@@ -42,6 +42,18 @@ namespace SEAL_Application.Features.Tracks.Commands.AssignTemplateToTrack
                 return BaseException.BadRequestResponse($"Template '{template.TemplateName}' hiện có tổng trọng số là {totalWeight}%. Vui lòng cấu hình đủ 100% trước khi đưa vào sử dụng.");
             }
 
+            // Đã có phiếu chấm trên hạng mục -> cấm đổi bộ tiêu chí (phiếu cũ chấm theo template cũ,
+            // phiếu mới theo template mới -> hai thang điểm trộn lẫn).
+            if (track.TemplateId != request.Model.TemplateId)
+            {
+                var trackHasScores = await _unitOfWork.GetRepository<Score>().AnyAsync(
+                    s => s.SubmitResult.TrackId == track.Id, cancellationToken);
+                if (trackHasScores)
+                {
+                    return BaseException.BadRequestInvaildInputResponse("Hạng mục đã có phiếu chấm nên không thể đổi bộ tiêu chí.");
+                }
+            }
+
             track.TemplateId = request.Model.TemplateId;
             track.LastUpdatedTime = CoreHelper.SystemTimeNow;
 

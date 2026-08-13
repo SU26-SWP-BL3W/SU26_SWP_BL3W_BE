@@ -1,4 +1,5 @@
 using MediatR;
+using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
@@ -11,14 +12,30 @@ namespace SEAL_Application.Features.UserRejections.Commands.CreateUserRejection
     public class CreateUserRejectionCommandHandler : IRequestHandler<CreateUserRejectionCommand, Result<CreateUserRejectionResponseModel>>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ICurrentUserService _currentUserService;
 
-        public CreateUserRejectionCommandHandler(IUnitOfWork unitOfWork)
+        public CreateUserRejectionCommandHandler(IUnitOfWork unitOfWork, ICurrentUserService currentUserService)
         {
             _unitOfWork = unitOfWork;
+            _currentUserService = currentUserService;
         }
 
         public async Task<Result<CreateUserRejectionResponseModel>> Handle(CreateUserRejectionCommand request, CancellationToken cancellationToken)
         {
+            // 0. Người thực hiện phải xác thực được và phải là Admin — lấy từ token, KHÔNG tin
+            //    field RejectedBy do client tự truyền (trước đây cho phép giả mạo bất kỳ admin nào).
+            var currentUserId = _currentUserService.UserId;
+            if (string.IsNullOrEmpty(currentUserId))
+            {
+                return new BaseException.UnauthorizedException("Không thể xác thực người dùng. Vui lòng đăng nhập.");
+            }
+
+            var adminUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(currentUserId);
+            if (adminUser == null || !adminUser.IsAdmin)
+            {
+                return new BaseException.ForbiddenException("Chỉ Admin hệ thống mới có quyền tạo bản ghi từ chối.");
+            }
+
             // 1. Kiểm tra User bị từ chối có tồn tại không
             var user = await _unitOfWork.GetRepository<User>().GetByIdAsync(request.Model.UserId);
             if (user == null)
@@ -26,31 +43,19 @@ namespace SEAL_Application.Features.UserRejections.Commands.CreateUserRejection
                 return BaseException.BadRequestNotFoundResponse($"Người dùng có ID '{request.Model.UserId}' không tồn tại.");
             }
 
-            // 2. Kiểm tra người thực hiện từ chối có tồn tại và phải là Admin không
-            var adminUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(request.Model.RejectedBy);
-            if (adminUser == null)
-            {
-                return BaseException.BadRequestNotFoundResponse($"Người thực hiện từ chối có ID '{request.Model.RejectedBy}' không tồn tại.");
-            }
-
-            if (!adminUser.IsAdmin)
-            {
-                return BaseException.BadRequestInvaildInputResponse($"Người thực hiện từ chối phải là Admin.");
-            }
-
-            // 3. Tạo bản ghi UserRejection
+            // 2. Tạo bản ghi UserRejection — RejectedBy lấy từ currentUserId đã xác thực ở trên
             var userRejection = new UserRejection
             {
                 UserId = request.Model.UserId,
-                RejectedBy = request.Model.RejectedBy,
+                RejectedBy = currentUserId,
                 Reason = request.Model.Reason
             };
 
-            // 4. Cập nhật trạng thái User thành không được duyệt
+            // 3. Cập nhật trạng thái User thành không được duyệt
             user.IsApproved = false;
             await _unitOfWork.GetRepository<User>().UpdateAsync(user);
 
-            // 5. Lưu vào Database
+            // 4. Lưu vào Database
             await _unitOfWork.GetRepository<UserRejection>().AddAsync(userRejection);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

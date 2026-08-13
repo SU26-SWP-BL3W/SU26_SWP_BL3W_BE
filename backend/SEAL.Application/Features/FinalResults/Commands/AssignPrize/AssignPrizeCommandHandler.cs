@@ -26,7 +26,13 @@ namespace SEAL_Application.Features.FinalResults.Commands.AssignPrize
             {
                 var prize = await _unitOfWork.GetRepository<Prize>().GetByIdAsync(request.Payload.PrizeId);
                 if (prize == null) return BaseException.BadRequestNotFoundResponse("Prize not found");
-                
+
+                var resultEventId = await ResolveEventIdAsync(result);
+                if (!string.IsNullOrEmpty(resultEventId) && prize.EventId != resultEventId)
+                {
+                    return BaseException.BadRequestInvaildInputResponse("Giải thưởng không thuộc cùng sự kiện với kết quả này.");
+                }
+
                 if (result.PrizeId != prize.Id)
                 {
                     var currentAssignedCount = _unitOfWork.GetRepository<FinalResult>()
@@ -49,6 +55,34 @@ namespace SEAL_Application.Features.FinalResults.Commands.AssignPrize
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return true;
+        }
+
+        /// <summary>FinalResult chỉ mang đúng 1 trong 3 phạm vi (RoundId/EventId/TrackId) — resolve về EventId thật.</summary>
+        private async Task<string?> ResolveEventIdAsync(FinalResult finalResult)
+        {
+            if (!string.IsNullOrEmpty(finalResult.EventId))
+            {
+                return finalResult.EventId;
+            }
+
+            if (!string.IsNullOrEmpty(finalResult.RoundId))
+            {
+                var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(finalResult.RoundId);
+                return round?.EventId;
+            }
+
+            if (!string.IsNullOrEmpty(finalResult.TrackId))
+            {
+                var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(finalResult.TrackId);
+                if (track == null)
+                {
+                    return null;
+                }
+                var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(track.RoundId);
+                return round?.EventId;
+            }
+
+            return null;
         }
     }
 }

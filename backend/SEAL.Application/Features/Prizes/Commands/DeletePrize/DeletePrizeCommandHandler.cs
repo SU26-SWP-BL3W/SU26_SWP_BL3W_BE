@@ -21,6 +21,13 @@ namespace SEAL_Application.Features.Prizes.Commands.DeletePrize
             var prize = await _unitOfWork.GetRepository<Prize>().GetByIdAsync(request.PrizeId);
             if (prize == null) return BaseException.BadRequestNotFoundResponse("Prize not found");
 
+            var hasAssignedResults = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
+                fr => fr.PrizeId == prize.Id, cancellationToken);
+            if (hasAssignedResults)
+            {
+                return BaseException.BadRequestInvaildInputResponse("Giải thưởng đang được gán cho kết quả nên không thể xóa.");
+            }
+
             _unitOfWork.GetRepository<Prize>().DeleteAsync(prize);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

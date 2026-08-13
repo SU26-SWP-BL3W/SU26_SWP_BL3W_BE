@@ -20,7 +20,7 @@ namespace SEAL_Application.Features.Teams.Commands.TransferTeamLeader
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
 
-        // Yêu cầu chuyển quyền chờ chấp nhận trong 7 ngày.
+        // Yêu cầu chuyển quyền chờ chấp nhận trong 24 giờ.
         private static readonly TimeSpan TransferLifetime = TimeSpan.FromHours(24);
 
         public TransferTeamLeaderCommandHandler(

@@ -8,6 +8,7 @@ using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
 using SEAL_Domain.Entity.Enums;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -47,13 +48,19 @@ namespace SEAL_Application.Features.Teams.Queries.GetMyTeamInvitation
                 return null;
             }
 
+            // PendingAccept nhưng đã quá hạn -> hiển thị Expired cho đúng thực tế
+            // (cùng cách tính với GetTeamInvitationsQueryHandler).
+            var effectiveStatus = (invitation.Status == TeamInvitationStatus.PendingAccept && invitation.ExpiresAt < DateTime.UtcNow)
+                ? TeamInvitationStatus.Expired
+                : invitation.Status;
+
             return new MyTeamInvitationResponseModel
             {
                 InvitationId = invitation.Id,
                 TeamId = invitation.TeamId,
                 TeamName = invitation.Team?.Name ?? string.Empty,
                 InvitedByUserId = invitation.InvitedByUserId,
-                Status = invitation.Status.ToString(),
+                Status = effectiveStatus.ToString(),
                 ExpiresAt = invitation.ExpiresAt,
                 Notes = invitation.Notes
             };

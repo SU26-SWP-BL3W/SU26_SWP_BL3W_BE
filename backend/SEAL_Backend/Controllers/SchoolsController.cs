@@ -102,7 +102,7 @@ namespace SEAL_Backend.Controllers
         }
 
         /// <summary>
-        /// Xóa trường học (Soft Delete).
+        /// Xóa trường học (xóa vĩnh viễn).
         /// </summary>
         /// <param name="id">ID của trường học.</param>
         /// <returns>Kết quả xóa.</returns>
