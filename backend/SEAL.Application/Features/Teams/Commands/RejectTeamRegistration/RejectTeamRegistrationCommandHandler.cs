@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][RejectTeamRegistration] EC tu choi ho so dang ky doi kem ly do, tra doi ve trang thai duoc sua lai.
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Interfaces;

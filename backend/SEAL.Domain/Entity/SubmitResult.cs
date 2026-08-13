@@ -1,3 +1,5 @@
+// [FLOW3-NOPBAI][Entity] SubmitResult: bai nop cua 1 doi cho 1 Hang muc (Track) trong 1 vong thi.
+
 ﻿using SEAL_Domain.Base;
 using System;
 using System.Collections.Generic;

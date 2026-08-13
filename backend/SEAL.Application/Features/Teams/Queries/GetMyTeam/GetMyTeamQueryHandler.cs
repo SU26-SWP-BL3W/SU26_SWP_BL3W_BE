@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][GetMyTeam] Sinh vien xem doi minh dang tham gia trong 1 su kien.
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Features.Teams.Queries.GetMyTeam.Models;

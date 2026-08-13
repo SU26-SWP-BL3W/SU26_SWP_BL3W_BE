@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][AddTeamMember] Them truc tiep 1 sinh vien vao doi (khong qua loi moi).
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Features.Teams.Commands.AddTeamMember.Models;

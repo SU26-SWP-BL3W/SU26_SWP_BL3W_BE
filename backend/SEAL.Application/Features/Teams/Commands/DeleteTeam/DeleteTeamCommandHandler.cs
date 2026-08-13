@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][DeleteTeam] Xoa doi chua chot dang ky.
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Services.UnitOfWork;

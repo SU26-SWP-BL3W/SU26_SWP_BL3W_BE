@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][GetTeamsList] Danh sach tat ca doi trong 1 su kien, phan trang.
+
 using SEAL_Domain.Base;
 using MediatR;
 using SEAL_Application.Commons;

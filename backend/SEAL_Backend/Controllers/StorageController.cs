@@ -1,3 +1,5 @@
+// [FLOW3-NOPBAI][Controller] StorageController: endpoint upload file dinh kem dung chung cho luong nop bai.
+
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SEAL_Application.Interfaces;

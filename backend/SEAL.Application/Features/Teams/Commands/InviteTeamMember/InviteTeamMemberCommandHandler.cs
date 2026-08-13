@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][InviteTeamMember] Truong nhom moi sinh vien khac vao doi, kiem tra han dang ky va toi da 5 thanh vien.
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Commons;

@@ -1,3 +1,5 @@
+// [FLOW3-NOPBAI][GetSubmitResultById] Xem chi tiet 1 bai nop gom cac duong link va thoi gian nop.
+
 using MediatR;
 using SEAL_Application.Features.SubmitResults.Queries.GetSubmitResultById.Models;
 using SEAL_Application.Services.UnitOfWork;

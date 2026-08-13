@@ -1,5 +1,6 @@
 using SEAL_Domain.Base;
 using System.Collections.Generic;
+using System;
 
 namespace SEAL_Domain.Entity
 {

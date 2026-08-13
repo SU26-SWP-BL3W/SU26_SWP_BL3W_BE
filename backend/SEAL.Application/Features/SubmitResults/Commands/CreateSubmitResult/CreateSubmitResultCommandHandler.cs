@@ -1,3 +1,5 @@
+// [FLOW3-NOPBAI][CreateSubmitResult] Doi nop cac duong link (GitHub Repo, Demo, Slide) cho 1 Hang muc truoc han chot.
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult.Models;

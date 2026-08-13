@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][TransferTeamLeader] Truong nhom hien tai chuyen vai tro Truong nhom cho mot thanh vien khac trong doi.
+
 using System;
 using System.Threading;
 using System.Threading.Tasks;

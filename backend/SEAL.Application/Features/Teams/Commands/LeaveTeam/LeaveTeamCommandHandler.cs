@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][LeaveTeam] Thanh vien tu roi doi khi doi con dang lap; TeamLeader khong duoc tu roi.
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Interfaces;

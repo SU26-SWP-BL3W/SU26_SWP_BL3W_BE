@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][GetTeamInvitations] Truong nhom xem danh sach loi moi da gui cho doi minh.
+
 using System;
 using System.Collections.Generic;
 using System.Linq;

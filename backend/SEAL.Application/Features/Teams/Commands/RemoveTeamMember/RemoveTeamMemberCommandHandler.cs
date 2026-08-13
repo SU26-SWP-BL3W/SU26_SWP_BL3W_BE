@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][RemoveTeamMember] Truong nhom loai mot thanh vien khoi doi trong luc doi con dang lap (Forming).
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Interfaces;

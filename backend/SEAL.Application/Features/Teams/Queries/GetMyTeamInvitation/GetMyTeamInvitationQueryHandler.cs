@@ -1,3 +1,5 @@
+// [FLOW3-DOITHI][GetMyTeamInvitation] Sinh vien xem loi moi vao doi ma minh nhan duoc.
+
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Features.Teams.Queries.GetMyTeamInvitation.Models;

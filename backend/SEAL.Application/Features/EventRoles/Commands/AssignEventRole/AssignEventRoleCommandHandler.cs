@@ -82,6 +82,14 @@ namespace SEAL_Application.Features.EventRoles.Commands.AssignEventRole
                 }
             }
 
+            // 4b. Kiểm tra ma trận xung đột vai trò (EC / Giám khảo / Mentor / Thí sinh)
+            var roleConflict = await EventRoleValidationHelper.CheckRoleConflictAsync(
+                _unitOfWork, request.Model.UserId, request.Model.EventId, request.Model.RoleName, request.Model.TrackId, null, cancellationToken);
+            if (roleConflict != null)
+            {
+                return BaseException.BadRequestDupplicationResponse(roleConflict);
+            }
+
             // 5. Khởi tạo đối tượng EventRole mới
             var eventRole = new EventRole
             {
