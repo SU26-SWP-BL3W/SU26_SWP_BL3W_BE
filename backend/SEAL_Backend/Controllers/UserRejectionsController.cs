@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using SEAL_Application.Features.UserRejections.Commands.CreateUserRejection;
 using SEAL_Application.Features.UserRejections.Commands.CreateUserRejection.Models;
@@ -22,6 +23,7 @@ namespace SEAL_Backend.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class UserRejectionsController : CustomControllerBase
     {
         private readonly IMediator _mediator;
@@ -82,7 +84,7 @@ namespace SEAL_Backend.Controllers
         }
 
         /// <summary>
-        /// Xóa bản ghi từ chối (Soft Delete).
+        /// Xóa bản ghi từ chối (xóa vĩnh viễn).
         /// </summary>
         /// <param name="id">ID của bản ghi cần xóa.</param>
         /// <returns>Kết quả thực hiện.</returns>

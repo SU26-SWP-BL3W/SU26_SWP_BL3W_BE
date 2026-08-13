@@ -63,7 +63,7 @@ namespace SEAL_Backend.Controllers
         }
 
         /// <summary>
-        /// Xóa một hạng mục (Soft Delete).
+        /// Xóa một hạng mục (xóa vĩnh viễn).
         /// </summary>
         /// <param name="id">ID của hạng mục cần xóa.</param>
         /// <returns>Kết quả thực hiện.</returns>

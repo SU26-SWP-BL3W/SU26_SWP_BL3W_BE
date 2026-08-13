@@ -25,7 +25,42 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoAppealEvent
         {
             var targetDate = request.TargetDate.ToUniversalTime();
 
-            // 1. Lấy hoặc tạo Users cần thiết
+            // 1. Dọn dẹp Demo Event Phúc Khảo cũ (nếu có) để không bị rác khi gọi lại nhiều lần.
+            //    Chỉ lọc đúng tiền tố của handler này — tránh dọn nhầm demo event của SetupDemoEvents.
+            var oldEvents = await _unitOfWork.GetRepository<Event>().Entities
+                .Where(e => e.EventName.StartsWith("[DEMO] Sự kiện Phúc Khảo"))
+                .ToListAsync(cancellationToken);
+
+            if (oldEvents.Any())
+            {
+                var oldEventIds = oldEvents.Select(e => e.Id).ToList();
+
+                var oldAppeals = await _unitOfWork.GetRepository<Appeal>().Entities
+                    .Where(a => a.Team != null && oldEventIds.Contains(a.Team.EventId))
+                    .ToListAsync(cancellationToken);
+                if (oldAppeals.Any()) _unitOfWork.GetRepository<Appeal>().DeleteRange(oldAppeals);
+
+                var oldFinalResults = await _unitOfWork.GetRepository<FinalResult>().Entities
+                    .Where(fr => fr.EventId != null && oldEventIds.Contains(fr.EventId))
+                    .ToListAsync(cancellationToken);
+                if (oldFinalResults.Any()) _unitOfWork.GetRepository<FinalResult>().DeleteRange(oldFinalResults);
+
+                var oldScores = await _unitOfWork.GetRepository<Score>().Entities
+                    .Where(s => s.EventRole != null && oldEventIds.Contains(s.EventRole.EventId))
+                    .ToListAsync(cancellationToken);
+                if (oldScores.Any()) _unitOfWork.GetRepository<Score>().DeleteRange(oldScores);
+
+                var oldEventRoles = await _unitOfWork.GetRepository<EventRole>().Entities
+                    .Where(er => oldEventIds.Contains(er.EventId))
+                    .ToListAsync(cancellationToken);
+                if (oldEventRoles.Any()) _unitOfWork.GetRepository<EventRole>().DeleteRange(oldEventRoles);
+
+                // Xoá Event (sẽ tự động cascade xoá Round, Track, Team, SubmitResult)
+                _unitOfWork.GetRepository<Event>().DeleteRange(oldEvents);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+
+            // 2. Lấy hoặc tạo Users cần thiết
             var fptSchool = await _unitOfWork.GetRepository<School>().Entities.FirstOrDefaultAsync(s => s.SchoolName == "FPT University", cancellationToken);
             var schoolId = fptSchool?.Id ?? string.Empty;
 

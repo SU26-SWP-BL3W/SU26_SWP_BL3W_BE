@@ -13,6 +13,12 @@ namespace SEAL_Application.Features.Teams.Queries.GetMyTeam.Models
         public string EventId { get; set; } = string.Empty;
         public string EventName { get; set; } = string.Empty;
         public DateTimeOffset CreatedTime { get; set; }
+
+        /// <summary>
+        /// Lý do đội bị từ chối duyệt ở lần chốt danh sách gần nhất; null nếu không có.
+        /// FE dùng cặp (Status == "Forming" &amp;&amp; LastRejectReason != null) để hiện banner nhắc đội sửa lại.
+        /// </summary>
+        public string? LastRejectReason { get; set; }
         public List<TeamMemberModel> Members { get; set; } = new List<TeamMemberModel>();
     }
 

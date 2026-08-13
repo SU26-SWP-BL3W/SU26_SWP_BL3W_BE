@@ -75,6 +75,7 @@ namespace SEAL_Application.Features.Teams.Queries.GetMyTeam
                 EventId = team.EventId,
                 EventName = team.Event?.EventName ?? string.Empty,
                 CreatedTime = team.CreatedTime,
+                LastRejectReason = team.LastRejectReason,
                 Members = team.EventRoles
                     .Where(er => er.RoleName == EventRoleType.TeamLeader || er.RoleName == EventRoleType.TeamMember)
                     .Select(er => new TeamMemberModel

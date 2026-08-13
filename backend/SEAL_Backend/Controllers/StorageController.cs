@@ -1,5 +1,6 @@
 // [FLOW3-NOPBAI][Controller] StorageController: endpoint upload file dinh kem dung chung cho luong nop bai.
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SEAL_Application.Interfaces;
@@ -16,6 +17,7 @@ namespace SEAL_Backend.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class StorageController : CustomControllerBase
     {
         private readonly ICloudStorageService _cloudStorageService;

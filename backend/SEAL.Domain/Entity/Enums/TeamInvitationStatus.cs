@@ -18,7 +18,7 @@ namespace SEAL_Domain.Entity.Enums
         /// <summary>Thành viên đã từ chối lời mời.</summary>
         Declined,
 
-        /// <summary>Lời mời hết hạn (quá 48h không phản hồi).</summary>
+        /// <summary>Lời mời hết hạn (quá 24h không phản hồi).</summary>
         Expired
     }
 }

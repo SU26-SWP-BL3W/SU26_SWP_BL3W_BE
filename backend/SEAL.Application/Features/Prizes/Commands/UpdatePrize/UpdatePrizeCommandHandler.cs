@@ -4,6 +4,7 @@ using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
 using SEAL_Domain.Ultis;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -22,6 +23,16 @@ namespace SEAL_Application.Features.Prizes.Commands.UpdatePrize
         {
             var prize = await _unitOfWork.GetRepository<Prize>().GetByIdAsync(request.PrizeId);
             if (prize == null) return BaseException.BadRequestNotFoundResponse("Prize not found");
+
+            if (request.Payload.Quantity < prize.Quantity)
+            {
+                var currentAssignedCount = _unitOfWork.GetRepository<FinalResult>()
+                    .Entities.Count(x => x.PrizeId == prize.Id);
+                if (request.Payload.Quantity < currentAssignedCount)
+                {
+                    return BaseException.BadRequestResponse($"Không thể hạ số lượng giải xuống dưới số đã gán hiện tại ({currentAssignedCount}).");
+                }
+            }
 
             prize.PrizeName = request.Payload.PrizeName;
             prize.Value = request.Payload.Value;

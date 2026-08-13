@@ -119,7 +119,7 @@ namespace SEAL_Backend.Controllers
         }
 
         /// <summary>
-        /// Xóa người dùng (Soft Delete). Chỉ Admin hệ thống mới được phép.
+        /// Xóa người dùng (xóa vĩnh viễn). Chỉ Admin hệ thống mới được phép.
         /// </summary>
         /// <param name="id">ID người dùng cần xóa.</param>
         /// <returns>Kết quả thực hiện.</returns>

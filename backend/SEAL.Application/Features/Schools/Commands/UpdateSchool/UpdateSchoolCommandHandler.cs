@@ -29,6 +29,14 @@ namespace SEAL_Application.Features.Schools.Commands.UpdateSchool
                 return BaseException.BadRequestNotFoundResponse("Không tìm thấy trường học");
             }
 
+            var isDuplicate = await repository.AnyAsync(
+                s => s.SchoolName.ToLower() == request.Model.SchoolName.ToLower() && s.Id != request.Id,
+                cancellationToken);
+            if (isDuplicate)
+            {
+                return BaseException.BadRequestDupplicationResponse($"Tên trường '{request.Model.SchoolName}' đã tồn tại trong hệ thống.");
+            }
+
             school.SchoolName = request.Model.SchoolName;
             school.Address = request.Model.Address;
             school.LastUpdatedTime = CoreHelper.SystemTimeNow;

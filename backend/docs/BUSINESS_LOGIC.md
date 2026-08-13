@@ -529,6 +529,11 @@ TotalScore = Σ (Value / MaxScore × Weight/100) × 10   [làm tròn 2 chữ s�
 
 ## 6. Tổng hợp các vấn đề phát hiện được
 
+> **Cập nhật 2026-08-13:** File này ban đầu được copy nguyên từ repo `SU26_SWP_SE1907_BACKEND` (cùng gốc SEAL) chứ chưa từng khảo sát riêng cho `SU26_SWP_BL3W_BE`. Đã chạy lại 3 agent đọc trực tiếp code hiện tại của repo này (không suy đoán từ doc) để xác minh — **toàn bộ 18 mục dưới đây đều xác nhận có thật trên BL3W, y hệt mô tả**, và đã được vá. Ngoài ra phát hiện thêm 3 điều BL3W-specific, cũng đã xử lý:
+> - `UserRejectionsController` và `DemoController` bị **mất** `[Authorize]`/`[AdminAuthorize]` ngay trong lúc port code sang BL3W (commit `bd396dc`, 2026-08-13) — không phải lỗi kế thừa, đã vá lại.
+> - `StorageController` (Upload/Download file) hoàn toàn không có auth — lỗ hổng có thật, có ở cả 2 repo, chưa từng nằm trong danh sách gốc — đã thêm `[Authorize]`.
+> - `FptMockController` cũng không có auth nhưng là mock/stub test cho FE (dữ liệu giả cứng) — **cố ý không sửa**.
+
 Danh sách dưới đây tổng hợp mọi bất nhất/lỗ hổng cụ thể mà 5 agent khảo sát phát hiện được khi đọc trực tiếp code (không phải suy đoán). Xếp theo mức độ nghiêm trọng giảm dần.
 
 ### 🔴 Nghiêm trọng — thiếu kiểm soát truy cập (Authorization)

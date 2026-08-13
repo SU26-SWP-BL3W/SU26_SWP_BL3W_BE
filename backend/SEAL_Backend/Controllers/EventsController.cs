@@ -76,7 +76,7 @@ namespace SEAL_Backend.Controllers
         }
 
         /// <summary>
-        /// Xóa một sự kiện (Soft Delete).
+        /// Xóa một sự kiện (xóa vĩnh viễn).
         /// </summary>
         /// <param name="eventId">ID của sự kiện cần xóa.</param>
         /// <returns>Kết quả thực hiện xóa.</returns>

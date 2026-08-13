@@ -157,6 +157,31 @@ namespace SEAL_Application.Features.Teams.Commands.AddTeamMember
             await _unitOfWork.GetRepository<EventRole>().AddAsync(memberRole);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            // 7. CHỐNG RACE đầy đội: 2 request AddTeamMember gần như đồng thời có thể cùng qua bước 5
+            //    (đếm-rồi-mới-ghi có khoảng hở) -> đội vượt trần MAX_TEAM_SIZE. Sau khi lưu, đếm lại:
+            //    nếu vượt, người vào SAU (CreatedTime lớn hơn, hòa thì so Id) tự rút.
+            var memberSnapshots = await _unitOfWork.GetRepository<EventRole>().GetQueryable()
+                .AsNoTracking()
+                .Where(er => er.TeamId == team.Id
+                          && (er.RoleName == EventRoleType.TeamLeader || er.RoleName == EventRoleType.TeamMember))
+                .Select(er => new { er.Id, er.CreatedTime })
+                .ToListAsync(cancellationToken);
+            if (memberSnapshots.Count > MAX_TEAM_SIZE)
+            {
+                var keepIds = memberSnapshots
+                    .OrderBy(m => m.CreatedTime)
+                    .ThenBy(m => m.Id, StringComparer.Ordinal)
+                    .Take(MAX_TEAM_SIZE)
+                    .Select(m => m.Id)
+                    .ToHashSet();
+                if (!keepIds.Contains(memberRole.Id))
+                {
+                    await _unitOfWork.GetRepository<EventRole>().DeleteAsync(memberRole);
+                    await _unitOfWork.SaveChangesAsync(cancellationToken);
+                    return BaseException.BadRequestInvaildInputResponse($"Nhóm đã đủ tối đa {MAX_TEAM_SIZE} thành viên.");
+                }
+            }
+
             return new AddTeamMemberResponseModel
             {
                 EventRoleId = memberRole.Id,

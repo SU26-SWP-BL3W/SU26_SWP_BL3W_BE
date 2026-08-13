@@ -18,7 +18,7 @@ namespace SEAL_Domain.Entity
 
         public TeamInvitationStatus Status { get; set; } = TeamInvitationStatus.PendingAccept;
 
-        /// <summary>Thời điểm hết hạn lời mời (mặc định 48h sau khi tạo).</summary>
+        /// <summary>Thời điểm hết hạn lời mời (mặc định 24h sau khi tạo).</summary>
         public DateTime ExpiresAt { get; set; }
 
         /// <summary>Thời điểm thành viên phản hồi (accept/decline).</summary>

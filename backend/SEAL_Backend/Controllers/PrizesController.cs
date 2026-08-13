@@ -5,6 +5,7 @@ using SEAL_Application.Features.Prizes.Commands.DeletePrize;
 using SEAL_Application.Features.Prizes.Commands.UpdatePrize;
 using SEAL_Application.Features.Prizes.Models;
 using SEAL_Application.Features.Prizes.Queries.GetPrizesByEventId;
+using SEAL_Backend.Filters;
 using SEAL_Backend.Helpers;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -13,6 +14,7 @@ namespace SEAL_Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [AdminOrCoordinatorAuthorize]
     public class PrizesController : CustomControllerBase
     {
         private readonly IMediator _mediator;

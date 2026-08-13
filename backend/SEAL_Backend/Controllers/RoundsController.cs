@@ -61,7 +61,7 @@ namespace SEAL_Backend.Controllers
         }
 
         /// <summary>
-        /// Xóa một vòng thi (Soft Delete).
+        /// Xóa một vòng thi (xóa vĩnh viễn).
         /// </summary>
         /// <param name="id">ID của vòng thi cần xóa.</param>
         /// <returns>Kết quả thực hiện.</returns>
