@@ -62,7 +62,7 @@ namespace SEAL_Application.Features.Users.Commands.VerifyEmail
                     cancellationToken);
 
                 // Nút đăng nhập trỏ về trang FE /auth (KHÔNG dùng ApiBaseUrl — production không cấu hình key đó)
-                var loginLink = $"{_frontendUrl}/auth";
+                var loginLink = $"{_frontendUrl}/login";
                 var taiKhoanHtml = $"Email: <b>{user.Email}</b><br>Mật khẩu tạm: <b>{tempPassword}</b>";
 
                 var subject = "[SEAL] Kích hoạt tài khoản thành công";

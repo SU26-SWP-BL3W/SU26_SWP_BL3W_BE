@@ -101,7 +101,7 @@ namespace SEAL_Application.Features.Users.Commands.RegisterUser
             // 5. Gửi email xác thực
             // Link kích hoạt phải trỏ về trang FE /auth/verify-email (FE sẽ gọi API xác thực),
             // KHÔNG dùng ApiBaseUrl vì production không cấu hình key này (sẽ ra localhost)
-            var verificationLink = $"{_frontendUrl}/auth/verify-email?token={emailVerificationToken}";
+            var verificationLink = $"{_frontendUrl}/verify-email?token={emailVerificationToken}";
             var emailBody = EmailTemplate.Render(
                 heading: "Kích hoạt tài khoản SEAL",
                 greetingName: user.FullName,
@@ -114,7 +114,19 @@ namespace SEAL_Application.Features.Users.Commands.RegisterUser
                 noteHtml: $"Liên kết kích hoạt sẽ hết hạn sau {ACTIVATION_EXPIRY_HOURS} giờ.",
                 showLoginHint: false);
 
-            await _emailService.SendEmailAsync(user.Email, "[SEAL] Kích hoạt tài khoản đăng ký", emailBody);
+            // Tài khoản ĐÃ được lưu ở bước SaveChangesAsync phía trên. Nếu để lỗi SMTP
+            // ném ra ngoài thì API trả 500 dù tài khoản đã tạo — người dùng đăng ký lại
+            // sẽ bị báo "email đã tồn tại" và kẹt hoàn toàn. Nuốt lỗi gửi mail giống
+            // các handler mời Judge/Mentor/EC, để người dùng còn dùng được "gửi lại email".
+            try
+            {
+                await _emailService.SendEmailAsync(user.Email, "[SEAL] Kích hoạt tài khoản đăng ký", emailBody);
+            }
+            catch
+            {
+                // Bỏ qua: tài khoản vẫn tạo thành công, người dùng có thể yêu cầu gửi lại
+                // email xác thực qua /Auth/resend-verification.
+            }
 
             return new UserModel
             {

@@ -85,7 +85,7 @@ namespace SEAL_Application.Features.Judges.Commands.InviteJudgeToTrack
 
                 // Link kích hoạt phải trỏ về trang FE /auth/verify-email (FE sẽ gọi API xác thực),
                 // KHÔNG dùng ApiBaseUrl vì production không cấu hình key này (sẽ ra localhost)
-                var verificationLink = $"{_frontendUrl}/auth/verify-email?token={verificationToken}";
+                var verificationLink = $"{_frontendUrl}/verify-email?token={verificationToken}";
                 var verifyBody = EmailTemplate.Render(
                     heading: "Kích hoạt tài khoản SEAL",
                     greetingName: invitedUser.FullName,
@@ -149,8 +149,8 @@ namespace SEAL_Application.Features.Judges.Commands.InviteJudgeToTrack
 
             // 7. Gửi email kèm 2 nút Đồng ý / Từ chối
             bool invitationEmailSent = true;
-            var acceptLink = $"{_frontendUrl}/invitations/{invitation.Id}?action=accept";
-            var declineLink = $"{_frontendUrl}/invitations/{invitation.Id}?action=decline";
+            var acceptLink = $"{_frontendUrl}/my-invitations";
+            var declineLink = $"{_frontendUrl}/my-invitations";
             var subject = $"[SEAL] Mời chấm thi hạng mục '{track.TrackName}'";
             var body = EmailTemplate.Render(
                 heading: "Lời mời chấm thi",
@@ -163,7 +163,7 @@ namespace SEAL_Application.Features.Judges.Commands.InviteJudgeToTrack
                 ctaUrl: acceptLink,
                 ctaText2: "Từ chối",
                 ctaUrl2: declineLink,
-                ctaFallbackUrl: $"{_frontendUrl}/invitations/{invitation.Id}",
+                ctaFallbackUrl: $"{_frontendUrl}/my-invitations",
                 noteHtml: $"Lời mời sẽ hết hạn sau {INVITATION_EXPIRY_HOURS} giờ. Nếu bạn không chấp nhận, vai trò sẽ không được tạo.");
             try
             {
