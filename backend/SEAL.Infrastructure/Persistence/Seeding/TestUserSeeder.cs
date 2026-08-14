@@ -27,8 +27,58 @@ namespace SEAL_Infrastructure.Persistence.Seeding
             {
                 new User
                 {
+                    Email = "ec.coordinator@seal.edu.vn",
+                    FullName = "Điều Phối Viên Sự Kiện",
+                    PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
+                    IsAdmin = false,
+                    IsApproved = true,
+                    IsStudent = false,
+                    SchoolId = systemSchool.Id
+                },
+                new User
+                {
+                    Email = "ec_demo@yopmail.com",
+                    FullName = "EC Demo",
+                    PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
+                    IsAdmin = false,
+                    IsApproved = true,
+                    IsStudent = false,
+                    SchoolId = systemSchool.Id
+                },
+                new User
+                {
                     Email = "judge1@example.com",
                     FullName = "John Judge",
+                    PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
+                    IsAdmin = false,
+                    IsApproved = true,
+                    IsStudent = false,
+                    SchoolId = systemSchool.Id
+                },
+                new User
+                {
+                    Email = "judge_demo@yopmail.com",
+                    FullName = "Judge Demo",
+                    PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
+                    IsAdmin = false,
+                    IsApproved = true,
+                    IsStudent = false,
+                    SchoolId = systemSchool.Id
+                },
+                new User
+                {
+                    Email = "judge.ai@seal.edu.vn",
+                    FullName = "Giám Khảo Trí Tuệ Nhân Tạo",
+                    PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
+                    IsAdmin = false,
+                    IsApproved = true,
+                    IsStudent = false,
+                    SchoolId = systemSchool.Id
+                },
+                new User
+                {
+                    Email = "mentor.ai@seal.edu.vn",
+                    FullName = "Cố Vấn Chuyên Môn AI",
                     PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
                     IsAdmin = false,
                     IsApproved = true,

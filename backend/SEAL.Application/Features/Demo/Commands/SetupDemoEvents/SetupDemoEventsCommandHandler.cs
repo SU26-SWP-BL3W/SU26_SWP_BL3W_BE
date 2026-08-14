@@ -68,7 +68,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             var fptSchool = await _unitOfWork.GetRepository<School>().Entities.FirstOrDefaultAsync(s => s.SchoolName == "FPT University", cancellationToken);
             var schoolId = fptSchool?.Id ?? string.Empty;
 
-            var ecUser = await GetOrCreateUserAsync("ec_demo@yopmail.com", "EC Demo", true, false, schoolId, cancellationToken);
+            var ecUser = await GetOrCreateUserAsync("ec_demo@yopmail.com", "EC Demo", false, false, schoolId, cancellationToken);
             var judgeUser = await GetOrCreateUserAsync("judge_demo@yopmail.com", "Judge Demo", false, false, schoolId, cancellationToken);
             var student1 = await GetOrCreateUserAsync("student1_demo@yopmail.com", "Student 1 Demo", false, true, schoolId, cancellationToken, "SE111111", true, "https://s3.cloudfly.vn/rhymo-bucket/general/e188d675-d952-422f-a536-7bac6a1edc22.jpg");
             var student2 = await GetOrCreateUserAsync("student2_demo@yopmail.com", "Student 2 Demo", false, true, schoolId, cancellationToken, "SE222222", true, "https://s3.cloudfly.vn/rhymo-bucket/general/e188d675-d952-422f-a536-7bac6a1edc22.jpg");

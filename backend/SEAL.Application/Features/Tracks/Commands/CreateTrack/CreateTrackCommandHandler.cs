@@ -28,14 +28,30 @@ namespace SEAL_Application.Features.Tracks.Commands.CreateTrack
                 return BaseException.BadRequestNotFoundResponse($"Sự kiện có ID '{request.Model.EventId}' không tồn tại.");
             }
 
-            if (request.Model.StartDate.HasValue && request.Model.StartDate.Value.ToUniversalTime() < parentEvent.StartDate)
-                return BaseException.BadRequestResponse($"Thời gian bắt đầu nộp bài không được trước ngày bắt đầu sự kiện ({parentEvent.StartDate:dd/MM/yyyy}).");
-            if (request.Model.EndDate.HasValue && request.Model.EndDate.Value.ToUniversalTime() > parentEvent.EndDate)
-                return BaseException.BadRequestResponse($"Hạn nộp bài không được vượt quá ngày kết thúc sự kiện ({parentEvent.EndDate:dd/MM/yyyy}).");
-            if (request.Model.ScoringStartDate.HasValue && request.Model.ScoringStartDate.Value.ToUniversalTime() > parentEvent.EndDate)
-                return BaseException.BadRequestResponse($"Thời gian bắt đầu chấm không được vượt quá ngày kết thúc sự kiện ({parentEvent.EndDate:dd/MM/yyyy}).");
-            if (request.Model.ScoringEndDate.HasValue && request.Model.ScoringEndDate.Value.ToUniversalTime() > parentEvent.EndDate)
-                return BaseException.BadRequestResponse($"Hạn chót chấm điểm không được vượt quá ngày kết thúc sự kiện ({parentEvent.EndDate:dd/MM/yyyy}).");
+            if (request.Model.StartDate.HasValue)
+            {
+                var st = request.Model.StartDate.Value.ToUniversalTime();
+                if (st < parentEvent.StartDate || st > parentEvent.EndDate)
+                    return BaseException.BadRequestResponse($"Thời gian bắt đầu nộp bài phải nằm trong khoảng diễn ra sự kiện ({parentEvent.StartDate:dd/MM/yyyy} - {parentEvent.EndDate:dd/MM/yyyy}).");
+            }
+            if (request.Model.EndDate.HasValue)
+            {
+                var et = request.Model.EndDate.Value.ToUniversalTime();
+                if (et < parentEvent.StartDate || et > parentEvent.EndDate)
+                    return BaseException.BadRequestResponse($"Hạn nộp bài phải nằm trong khoảng diễn ra sự kiện ({parentEvent.StartDate:dd/MM/yyyy} - {parentEvent.EndDate:dd/MM/yyyy}).");
+            }
+            if (request.Model.ScoringStartDate.HasValue)
+            {
+                var sst = request.Model.ScoringStartDate.Value.ToUniversalTime();
+                if (sst < parentEvent.StartDate || sst > parentEvent.EndDate)
+                    return BaseException.BadRequestResponse($"Thời gian bắt đầu chấm phải nằm trong khoảng diễn ra sự kiện ({parentEvent.StartDate:dd/MM/yyyy} - {parentEvent.EndDate:dd/MM/yyyy}).");
+            }
+            if (request.Model.ScoringEndDate.HasValue)
+            {
+                var set = request.Model.ScoringEndDate.Value.ToUniversalTime();
+                if (set < parentEvent.StartDate || set > parentEvent.EndDate)
+                    return BaseException.BadRequestResponse($"Hạn chót chấm điểm phải nằm trong khoảng diễn ra sự kiện ({parentEvent.StartDate:dd/MM/yyyy} - {parentEvent.EndDate:dd/MM/yyyy}).");
+            }
 
             // 2. Kiểm tra trùng tên Track trong cùng một Event
             var isDuplicate = await _unitOfWork.GetRepository<Track>().AnyAsync(
@@ -72,6 +88,7 @@ namespace SEAL_Application.Features.Tracks.Commands.CreateTrack
                 TemplateId = request.Model.TemplateId,
                 TrackName = request.Model.TrackName,
                 Description = request.Model.Description,
+                SubmissionRuleDescription = request.Model.SubmissionRuleDescription,
                 StartDate = request.Model.StartDate?.ToUniversalTime(),
                 EndDate = request.Model.EndDate?.ToUniversalTime(),
                 ScoringStartDate = request.Model.ScoringStartDate?.ToUniversalTime(),
@@ -88,6 +105,7 @@ namespace SEAL_Application.Features.Tracks.Commands.CreateTrack
                 TemplateId = track.TemplateId,
                 TrackName = track.TrackName,
                 Description = track.Description,
+                SubmissionRuleDescription = track.SubmissionRuleDescription,
                 StartDate = track.StartDate,
                 EndDate = track.EndDate,
                 ScoringStartDate = track.ScoringStartDate,
