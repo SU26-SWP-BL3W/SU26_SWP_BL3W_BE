@@ -22,6 +22,13 @@ namespace SEAL_Application.Features.FinalResults.Commands.AssignPrize
             var result = await _unitOfWork.GetRepository<FinalResult>().GetByIdAsync(request.FinalResultId);
             if (result == null) return BaseException.BadRequestNotFoundResponse("FinalResult not found");
 
+            // Chỉ trao giải khi kết quả đã công bố chính thức — tránh gán giải cho bản còn nháp
+            // rồi bị tính/xóa lại (CalculateRoundResults xóa-tạo-lại toàn bộ FinalResult của Round).
+            if (!result.IsPublished && !string.IsNullOrEmpty(request.Payload.PrizeId))
+            {
+                return BaseException.BadRequestInvaildInputResponse("Chỉ có thể gán giải thưởng cho kết quả đã công bố (IsPublished).");
+            }
+
             if (!string.IsNullOrEmpty(request.Payload.PrizeId))
             {
                 var prize = await _unitOfWork.GetRepository<Prize>().GetByIdAsync(request.Payload.PrizeId);

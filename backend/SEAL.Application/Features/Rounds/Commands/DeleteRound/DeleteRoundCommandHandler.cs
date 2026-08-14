@@ -54,6 +54,22 @@ namespace SEAL_Application.Features.Rounds.Commands.DeleteRound
                 return new BaseException.ForbiddenException("Bạn không có quyền xóa vòng thi này.");
             }
 
+            // 1b. Vòng thi đã có bài nộp/kết quả -> KHÔNG xóa: khác UpdateRound (khóa dần theo dữ liệu),
+            //     DeleteRound trước đây xóa cứng vô điều kiện, cascade xóa sạch Track/SubmitResult/Score con.
+            var isPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
+                fr => fr.RoundId == round.Id, cancellationToken);
+            if (isPublished)
+            {
+                return BaseException.BadRequestInvaildInputResponse("Vòng thi đã có kết quả được tính nên không thể xóa.");
+            }
+
+            var hasSubmissions = await _unitOfWork.GetRepository<SubmitResult>().AnyAsync(
+                sr => sr.RoundId == round.Id, cancellationToken);
+            if (hasSubmissions)
+            {
+                return BaseException.BadRequestInvaildInputResponse("Vòng thi đã có bài nộp nên không thể xóa.");
+            }
+
             // 2. Xóa cứng thực thể (Cascade delete các Track liên quan sẽ tự động chạy trong DB)
             await _unitOfWork.GetRepository<Round>().DeleteAsync(round);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

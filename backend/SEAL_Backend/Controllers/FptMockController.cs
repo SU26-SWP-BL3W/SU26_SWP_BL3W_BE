@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using SEAL_Application.Features.Users.Commands.CreateUser.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,11 +17,11 @@ namespace SEAL_Backend.Controllers
     {
         private static readonly List<FptStudentRecord> _students = new()
         {
-            new("SE123456", "Nguyen Van A",    "SE",  2021),
-            new("SE789012", "Tran Thi B",      "SE",  2022),
-            new("CS001122", "Le Van C",        "CS",  2021),
-            new("IA334455", "Pham Thi D",      "IA",  2023),
-            new("SS667788", "Hoang Van E",     "SS",  2022),
+            new("SE123456", "Nguyen Van A",    "se123456@fpt.edu.vn",    "SE",  2021),
+            new("SE789012", "Tran Thi B",      "se789012@fpt.edu.vn",    "SE",  2022),
+            new("CS001122", "Le Van C",        "cs001122@fpt.edu.vn",    "CS",  2021),
+            new("IA334455", "Pham Thi D",      "ia334455@fpt.edu.vn",    "IA",  2023),
+            new("SS667788", "Hoang Van E",     "ss667788@fpt.edu.vn",    "SS",  2022),
         };
 
         /// <summary>
@@ -40,13 +41,20 @@ namespace SEAL_Backend.Controllers
             if (student is null)
                 return NotFound(new { message = $"Sinh viên '{studentCode}' không tồn tại trong hệ thống FPT." });
 
+            // Shape khớp với SEAL_Application.Features.Users.Commands.CreateUser.Models.FptStudentResponse
+            // (model mà UpdateStudentProfileCommandHandler thực sự deserialize vào — {IsValid, Data:{...}, Message}),
+            // trước đây controller này tự khai 1 model FLAT riêng khiến Data luôn null khi deserialize.
             return Ok(new FptStudentResponse
             {
-                IsValid    = true,
-                StudentCode = student.StudentCode,
-                FullName   = student.FullName,
-                Major      = student.Major,
-                EnrollYear = student.EnrollYear
+                IsValid = true,
+                Data = new FptStudentData
+                {
+                    StudentCode = student.StudentCode,
+                    FullName = student.FullName,
+                    Email = student.Email,
+                    Major = student.Major,
+                    EnrollYear = student.EnrollYear
+                }
             });
         }
     }
@@ -54,36 +62,5 @@ namespace SEAL_Backend.Controllers
     /// <summary>
     /// Record đại diện cho một bản ghi sinh viên trong Mock Database.
     /// </summary>
-    public record FptStudentRecord(string StudentCode, string FullName, string Major, int EnrollYear);
-
-    /// <summary>
-    /// Model phản hồi thông tin sinh viên từ Mock Service.
-    /// </summary>
-    public class FptStudentResponse
-    {
-        /// <summary>
-        /// Trạng thái hợp lệ của sinh viên.
-        /// </summary>
-        public bool   IsValid     { get; set; }
-
-        /// <summary>
-        /// Mã số sinh viên.
-        /// </summary>
-        public string StudentCode { get; set; } = default!;
-
-        /// <summary>
-        /// Họ và tên sinh viên.
-        /// </summary>
-        public string FullName    { get; set; } = default!;
-
-        /// <summary>
-        /// Chuyên ngành.
-        /// </summary>
-        public string Major       { get; set; } = default!;
-
-        /// <summary>
-        /// Năm nhập học.
-        /// </summary>
-        public int    EnrollYear  { get; set; }
-    }
+    public record FptStudentRecord(string StudentCode, string FullName, string Email, string Major, int EnrollYear);
 }

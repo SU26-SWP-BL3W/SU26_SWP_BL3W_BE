@@ -39,6 +39,16 @@ namespace SEAL_Application.Features.Criterias.Commands.UpdateCriteria
                 return BaseException.BadRequestDupplicationResponse($"Tiêu chí '{request.Model.CriteriaName}' đã tồn tại.");
             }
 
+            // 2b. Đã có phiếu chấm dùng tiêu chí này -> khoá sửa (nhất quán với UpdateTemplateCriteriaConfig,
+            //     tránh đổi tên/mô tả sau khi giám khảo đã chấm dựa trên nội dung cũ).
+            var usedInScoring = await _unitOfWork.GetRepository<ScoreDetail>().AnyAsync(
+                sd => sd.CriteriaId == request.Id, cancellationToken);
+            if (usedInScoring)
+            {
+                return BaseException.BadRequestInvaildInputResponse(
+                    "Tiêu chí đã được dùng để chấm điểm nên không thể sửa.");
+            }
+
             // 3. Cập nhật thông tin Criteria
             criteria.CriteriaName = request.Model.CriteriaName;
             criteria.Description = request.Model.Description;
