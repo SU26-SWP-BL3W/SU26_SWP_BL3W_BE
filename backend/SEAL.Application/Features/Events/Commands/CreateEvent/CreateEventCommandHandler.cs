@@ -134,7 +134,7 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent
                         var trackEntity = new Track
                         {
                             Id = trackId,
-                            RoundId = roundId,
+                            EventId = eventEntity.Id,
                             TrackName = trackDto.TrackName,
                             Description = trackDto.Description,
                             TemplateId = trackDto.TemplateId,

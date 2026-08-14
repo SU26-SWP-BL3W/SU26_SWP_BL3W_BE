@@ -6,6 +6,7 @@ using SEAL_Domain.Entity;
 using SEAL_Application.Features.Tracks.Commands.CreateTrack.Models;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace SEAL_Application.Features.Tracks.Commands.CreateTrack
 {
@@ -20,37 +21,30 @@ namespace SEAL_Application.Features.Tracks.Commands.CreateTrack
 
         public async Task<Result<CreateTrackResponseModel>> Handle(CreateTrackCommand request, CancellationToken cancellationToken)
         {
-            // 1. Kiểm tra Round có tồn tại không
-            var round = await _unitOfWork.GetRepository<Round>().GetQueryable()
-                .Include(r => r.Event)
-                .FirstOrDefaultAsync(r => r.Id == request.Model.RoundId, cancellationToken);
-
-            if (round == null)
+            // 1. Kiểm tra Event có tồn tại không
+            var parentEvent = await _unitOfWork.GetRepository<Event>().GetByIdAsync(request.Model.EventId);
+            if (parentEvent == null)
             {
-                return BaseException.BadRequestNotFoundResponse($"Vòng thi có ID '{request.Model.RoundId}' không tồn tại.");
+                return BaseException.BadRequestNotFoundResponse($"Sự kiện có ID '{request.Model.EventId}' không tồn tại.");
             }
 
-            var parentEvent = round.Event;
-            if (parentEvent != null)
-            {
-                if (request.Model.StartDate.HasValue && request.Model.StartDate.Value.ToUniversalTime() < parentEvent.StartDate)
-                    return BaseException.BadRequestResponse($"Thời gian bắt đầu nộp bài không được trước ngày bắt đầu sự kiện ({parentEvent.StartDate:dd/MM/yyyy}).");
-                if (request.Model.EndDate.HasValue && request.Model.EndDate.Value.ToUniversalTime() > parentEvent.EndDate)
-                    return BaseException.BadRequestResponse($"Hạn nộp bài không được vượt quá ngày kết thúc sự kiện ({parentEvent.EndDate:dd/MM/yyyy}).");
-                if (request.Model.ScoringStartDate.HasValue && request.Model.ScoringStartDate.Value.ToUniversalTime() > parentEvent.EndDate)
-                    return BaseException.BadRequestResponse($"Thời gian bắt đầu chấm không được vượt quá ngày kết thúc sự kiện ({parentEvent.EndDate:dd/MM/yyyy}).");
-                if (request.Model.ScoringEndDate.HasValue && request.Model.ScoringEndDate.Value.ToUniversalTime() > parentEvent.EndDate)
-                    return BaseException.BadRequestResponse($"Hạn chót chấm điểm không được vượt quá ngày kết thúc sự kiện ({parentEvent.EndDate:dd/MM/yyyy}).");
-            }
+            if (request.Model.StartDate.HasValue && request.Model.StartDate.Value.ToUniversalTime() < parentEvent.StartDate)
+                return BaseException.BadRequestResponse($"Thời gian bắt đầu nộp bài không được trước ngày bắt đầu sự kiện ({parentEvent.StartDate:dd/MM/yyyy}).");
+            if (request.Model.EndDate.HasValue && request.Model.EndDate.Value.ToUniversalTime() > parentEvent.EndDate)
+                return BaseException.BadRequestResponse($"Hạn nộp bài không được vượt quá ngày kết thúc sự kiện ({parentEvent.EndDate:dd/MM/yyyy}).");
+            if (request.Model.ScoringStartDate.HasValue && request.Model.ScoringStartDate.Value.ToUniversalTime() > parentEvent.EndDate)
+                return BaseException.BadRequestResponse($"Thời gian bắt đầu chấm không được vượt quá ngày kết thúc sự kiện ({parentEvent.EndDate:dd/MM/yyyy}).");
+            if (request.Model.ScoringEndDate.HasValue && request.Model.ScoringEndDate.Value.ToUniversalTime() > parentEvent.EndDate)
+                return BaseException.BadRequestResponse($"Hạn chót chấm điểm không được vượt quá ngày kết thúc sự kiện ({parentEvent.EndDate:dd/MM/yyyy}).");
 
-            // 2. Kiểm tra trùng tên Track trong cùng một Round
+            // 2. Kiểm tra trùng tên Track trong cùng một Event
             var isDuplicate = await _unitOfWork.GetRepository<Track>().AnyAsync(
-                t => t.TrackName.ToLower() == request.Model.TrackName.ToLower() && t.RoundId == request.Model.RoundId,
+                t => t.TrackName.ToLower() == request.Model.TrackName.ToLower() && t.EventId == request.Model.EventId,
                 cancellationToken);
 
             if (isDuplicate)
             {
-                return BaseException.BadRequestDupplicationResponse($"Hạng mục '{request.Model.TrackName}' đã tồn tại trong vòng thi này.");
+                return BaseException.BadRequestDupplicationResponse($"Hạng mục '{request.Model.TrackName}' đã tồn tại trong sự kiện này.");
             }
 
             // 3. Kiểm tra Template nếu có
@@ -74,7 +68,7 @@ namespace SEAL_Application.Features.Tracks.Commands.CreateTrack
 
             var track = new Track
             {
-                RoundId = request.Model.RoundId,
+                EventId = request.Model.EventId,
                 TemplateId = request.Model.TemplateId,
                 TrackName = request.Model.TrackName,
                 Description = request.Model.Description,
@@ -90,7 +84,7 @@ namespace SEAL_Application.Features.Tracks.Commands.CreateTrack
             return new CreateTrackResponseModel
             {
                 Id = track.Id,
-                RoundId = track.RoundId,
+                EventId = track.EventId,
                 TemplateId = track.TemplateId,
                 TrackName = track.TrackName,
                 Description = track.Description,
@@ -103,4 +97,3 @@ namespace SEAL_Application.Features.Tracks.Commands.CreateTrack
         }
     }
 }
-

@@ -81,27 +81,21 @@ namespace SEAL_Application.Features.SubmitResults.Commands.DeleteSubmitResult
             }
 
             // Không cho XÓA bài nộp sau khi kết quả vòng đã được tính/công bố.
-            var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(submitResult.TrackId);
-            if (track != null)
+            var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(submitResult.RoundId);
+            if (round != null)
             {
-                // HẠN NỘP: hết thời gian vòng thì bài "đóng băng" — không cho xóa
-                // (tránh rút bài sau hạn; xóa xong cũng không thể nộp lại vì đã quá hạn).
-                var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(track.RoundId);
-                if (round != null)
+                var nowUtc = DateTime.UtcNow;
+                if (nowUtc < round.StartDate || nowUtc > round.EndDate)
                 {
-                    var nowUtc = DateTime.UtcNow;
-                    if (nowUtc < round.StartDate || nowUtc > round.EndDate)
-                    {
-                        return BaseException.BadRequestInvaildInputResponse("Ngoài thời gian vòng thi nên không thể xóa bài nộp.");
-                    }
+                    return BaseException.BadRequestInvaildInputResponse("Ngoài thời gian vòng thi nên không thể xóa bài nộp.");
                 }
+            }
 
-                var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
-                    fr => fr.RoundId == track.RoundId, cancellationToken);
-                if (roundPublished)
-                {
-                    return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể xóa bài nộp.");
-                }
+            var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
+                fr => fr.RoundId == submitResult.RoundId, cancellationToken);
+            if (roundPublished)
+            {
+                return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể xóa bài nộp.");
             }
 
             repo.Delete(submitResult);

@@ -34,7 +34,7 @@ namespace SEAL_Application.Features.Appeals.Commands.CreateAppeal
 
             var submitResult = await _unitOfWork.GetRepository<SubmitResult>().Entities
                 .Include(sr => sr.Track)
-                    .ThenInclude(t => t.Round)
+                .Include(sr => sr.Round)
                 .FirstOrDefaultAsync(sr => sr.Id == request.SubmitResultId, cancellationToken);
 
             if (submitResult == null)
@@ -53,7 +53,7 @@ namespace SEAL_Application.Features.Appeals.Commands.CreateAppeal
             }
 
             // 2. Kiểm tra thời gian phúc khảo
-            var round = submitResult.Track!.Round;
+            var round = submitResult.Round;
             var now = CoreHelper.SystemTimeNow.UtcDateTime;
 
             if (now < round.StartDate)

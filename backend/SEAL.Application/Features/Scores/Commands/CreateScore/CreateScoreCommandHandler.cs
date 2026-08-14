@@ -91,19 +91,19 @@ namespace SEAL_Application.Features.Scores.Commands.CreateScore
             var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(submit.TrackId);
             if (track != null)
             {
-                var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(track.RoundId);
-                if (round != null && System.DateTime.UtcNow <= round.EndDate)
-                {
-                    return BaseException.BadRequestInvaildInputResponse(
-                        "Vòng thi chưa kết thúc nên chưa thể chấm bài (đội vẫn còn quyền nộp/sửa bài).");
-                }
+            var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(submit.RoundId);
+            if (round != null && System.DateTime.UtcNow <= round.EndDate)
+            {
+                return BaseException.BadRequestInvaildInputResponse(
+                    "Vòng thi chưa kết thúc nên chưa thể chấm bài (đội vẫn còn quyền nộp/sửa bài).");
+            }
 
-                var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
-                    fr => fr.RoundId == track.RoundId, cancellationToken);
-                if (roundPublished)
-                {
-                    return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể tạo phiếu chấm.");
-                }
+            var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
+                fr => fr.RoundId == submit.RoundId, cancellationToken);
+            if (roundPublished)
+            {
+                return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể tạo phiếu chấm.");
+            }
             }
 
             // 2. Một giám khảo không chấm trùng cùng một bài nộp

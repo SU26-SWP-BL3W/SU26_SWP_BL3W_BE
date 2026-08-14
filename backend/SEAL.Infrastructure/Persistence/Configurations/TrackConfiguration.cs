@@ -12,7 +12,12 @@ namespace SEAL_Infrastructure.Persistence.Configurations
             builder.Property(x => x.TrackName).IsRequired().HasMaxLength(255);
             builder.Property(x => x.Description).HasMaxLength(1000);
             builder.Property(x => x.SubmissionRuleDescription).HasMaxLength(2000);
-            
+
+            builder.HasOne(t => t.Event)
+                   .WithMany(e => e.Tracks)
+                   .HasForeignKey(t => t.EventId)
+                   .OnDelete(DeleteBehavior.Cascade);
+
             builder.HasOne(t => t.Template)
                    .WithMany(tp => tp.Tracks)
                    .HasForeignKey(t => t.TemplateId)

@@ -27,7 +27,7 @@ namespace SEAL_Application.Features.Tracks.Queries.GetTracksByEventId
             var query = _unitOfWork.GetRepository<Track>().Entities
                 .Include(t => t.EventRoles)
                     .ThenInclude(er => er.User)
-                .Where(t => t.Round.EventId == request.EventId);
+                .Where(t => t.EventId == request.EventId);
 
             var pagedTracks = await query.ToPagedResultAsync(
                 request,
@@ -38,7 +38,7 @@ namespace SEAL_Application.Features.Tracks.Queries.GetTracksByEventId
             var trackModels = pagedTracks.Data.Select(t => new TrackModel
             {
                 Id = t.Id,
-                RoundId = t.RoundId,
+                EventId = t.EventId,
                 TemplateId = t.TemplateId,
                 TrackName = t.TrackName,
                 Description = t.Description,
@@ -86,6 +86,3 @@ namespace SEAL_Application.Features.Tracks.Queries.GetTracksByEventId
         }
     }
 }
-
-
-

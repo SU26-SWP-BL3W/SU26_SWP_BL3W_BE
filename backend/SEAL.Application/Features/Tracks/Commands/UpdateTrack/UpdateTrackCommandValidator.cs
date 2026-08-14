@@ -12,9 +12,9 @@ namespace SEAL_Application.Features.Tracks.Commands.UpdateTrack
             RuleFor(x => x.Model)
                 .NotNull().WithMessage("Dữ liệu cập nhật không được để trống");
 
-            RuleFor(x => x.Model.RoundId)
-                .NotEmpty().WithMessage("ID vòng thi không được để trống")
-                .When(x => x.Model != null);
+            RuleFor(x => x.Model.EventId)
+                .NotEmpty().WithMessage("ID sự kiện không được để trống")
+                .When(x => x.Model != null && !string.IsNullOrEmpty(x.Model.EventId));
 
             RuleFor(x => x.Model.TrackName)
                 .NotEmpty().WithMessage("Tên hạng mục không được để trống")

@@ -125,7 +125,7 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
             {
                 // 2e'. CHỈ ĐƯỢC CHẤM SAU KHI HẠNG MỤC KẾT THÚC NỘP BÀI: trong thời gian hạng mục còn mở, đội vẫn được
                 //      sửa bài (chấm sớm sẽ khóa oan quyền sửa của đội vì bài đã-có-điểm không cho sửa).
-                var scoringRound = await _unitOfWork.GetRepository<Round>().GetByIdAsync(track.RoundId);
+                var scoringRound = await _unitOfWork.GetRepository<Round>().GetByIdAsync(submit.RoundId);
                 var effectiveEndDate = track.EndDate ?? scoringRound?.EndDate;
                 if (effectiveEndDate.HasValue && System.DateTime.UtcNow <= effectiveEndDate.Value)
                 {
@@ -149,7 +149,7 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
 
                 // 2e. Khóa chấm khi kết quả vòng đã được tính/công bố (tránh sửa điểm làm lệch kết quả đã công bố).
                 var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
-                    fr => fr.RoundId == track.RoundId, cancellationToken);
+                    fr => fr.RoundId == submit.RoundId, cancellationToken);
                 if (roundPublished)
                 {
                     return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể sửa điểm chấm.");

@@ -1,10 +1,11 @@
 using SEAL_Domain.Base;
 using System.Collections.Generic;
+
 namespace SEAL_Domain.Entity
 {
     public class Track : BaseEntity
     {
-        public string RoundId { get; set; } = string.Empty;
+        public string EventId { get; set; } = string.Empty;
         public string? TemplateId { get; set; }
         public string TrackName { get; set; } = string.Empty;
         public string? Description { get; set; }
@@ -15,8 +16,9 @@ namespace SEAL_Domain.Entity
         public DateTime? ScoringEndDate { get; set; }
 
         // Navigation Properties
-        public virtual Round Round { get; set; } = null!;
+        public virtual Event Event { get; set; } = null!;
         public virtual Template? Template { get; set; }
         public virtual ICollection<EventRole> EventRoles { get; set; } = new List<EventRole>();
+        public virtual ICollection<Team> Teams { get; set; } = new List<Team>();
     }
 }

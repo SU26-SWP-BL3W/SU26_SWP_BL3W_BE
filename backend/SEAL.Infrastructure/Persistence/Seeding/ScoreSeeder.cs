@@ -32,7 +32,7 @@ namespace SEAL_Infrastructure.Persistence.Seeding
                     return;
                 }
 
-                var judgeRole = await context.EventRoles.FirstOrDefaultAsync(er => er.UserId == judge.Id && er.EventId == submission.Track.Round.EventId);
+                var judgeRole = await context.EventRoles.FirstOrDefaultAsync(er => er.UserId == judge.Id && er.EventId == submission.Track.EventId);
                 
                 if (judgeRole == null)
                 {

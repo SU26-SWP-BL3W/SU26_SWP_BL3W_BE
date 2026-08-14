@@ -107,7 +107,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
 
             var track1 = new Track
             {
-                Round = round1,
+                Event = event1,
                 TrackName = "Phần mềm",
                 Description = "Hạng mục dành cho các sản phẩm phần mềm, ứng dụng web/mobile.",
                 SubmissionRuleDescription = "Link github repository dự án\nLink demo",
@@ -178,7 +178,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
 
             var track2 = new Track
             {
-                Round = round2,
+                Event = event2,
                 TrackName = "Thiết kế",
                 Description = "Hạng mục dành cho các sản phẩm thiết kế đồ họa, UI/UX.",
                 SubmissionRuleDescription = "Link demo\nLink báo cáo/slide",
@@ -192,7 +192,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
 
             var track3 = new Track
             {
-                Round = round2,
+                Event = event2,
                 TrackName = "Phần mềm",
                 Description = "Hạng mục dành cho các sản phẩm phần mềm, ứng dụng web/mobile.",
                 SubmissionRuleDescription = "Link github repository dự án\nLink demo",
@@ -206,9 +206,9 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
 
             var track4 = new Track
             {
-                Round = round3,
-                TrackName = "Thiết kế",
-                Description = "Hạng mục dành cho các sản phẩm thiết kế đồ họa, UI/UX (Vòng Chung kết).",
+                Event = event2,
+                TrackName = "Thiết kế mở rộng",
+                Description = "Hạng mục mở rộng dành cho các sản phẩm thiết kế đồ họa, UI/UX.",
                 SubmissionRuleDescription = "Link demo\nLink báo cáo/slide",
                 TemplateId = template?.Id,
                 StartDate = targetDate.AddDays(11), 
@@ -220,8 +220,8 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
 
             var track5 = new Track
             {
-                Round = round3,
-                TrackName = "Phần mềm",
+                Event = event2,
+                TrackName = "Phần mềm nâng cao",
                 Description = "Hạng mục dành cho các sản phẩm phần mềm, ứng dụng web/mobile (Vòng Chung kết).",
                 SubmissionRuleDescription = "Link github repository dự án\nLink demo",
                 TemplateId = template?.Id,

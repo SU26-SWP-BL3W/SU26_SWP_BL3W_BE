@@ -104,7 +104,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoAppealEvent
 
             var track3 = new Track
             {
-                Round = round3,
+                Event = event3,
                 TrackName = "Phần mềm",
                 Description = "Hạng mục phần mềm",
                 SubmissionRuleDescription = "Link demo",

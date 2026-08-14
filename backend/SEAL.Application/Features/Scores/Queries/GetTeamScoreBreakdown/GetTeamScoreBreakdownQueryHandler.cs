@@ -102,7 +102,8 @@ namespace SEAL_Application.Features.Scores.Queries.GetTeamScoreBreakdown
             // 1. Các bài nộp của đội (kèm Track + Round).
             var submissions = await _unitOfWork.GetRepository<SubmitResult>().Entities
                 .AsNoTracking()
-                .Include(s => s.Track)!.ThenInclude(t => t.Round)
+                .Include(s => s.Track)
+                .Include(s => s.Round)
                 .Where(s => s.TeamId == request.TeamId)
                 .ToListAsync(cancellationToken);
             if (submissions.Count == 0)
@@ -116,8 +117,7 @@ namespace SEAL_Application.Features.Scores.Queries.GetTeamScoreBreakdown
                 .Select(s => s.Track!.TemplateId!)
                 .Distinct().ToList();
             var roundIds = submissions
-                .Where(s => s.Track != null)
-                .Select(s => s.Track!.RoundId)
+                .Select(s => s.RoundId)
                 .Distinct().ToList();
 
             // 2. Phiếu chấm của các bài đó (kèm giám khảo + điểm chi tiết).
@@ -158,9 +158,9 @@ namespace SEAL_Application.Features.Scores.Queries.GetTeamScoreBreakdown
                 {
                     SubmitResultId = sub.Id,
                     TrackName = sub.Track?.TrackName ?? string.Empty,
-                    RoundId = sub.Track?.RoundId ?? string.Empty,
-                    RoundName = sub.Track?.Round?.RoundName ?? string.Empty,
-                    RoundPublished = sub.Track != null && publishedSet.Contains(sub.Track.RoundId),
+                    RoundId = sub.RoundId,
+                    RoundName = sub.Round?.RoundName ?? string.Empty,
+                    RoundPublished = publishedSet.Contains(sub.RoundId),
                 };
 
                 foreach (var score in scores.Where(s => s.SubmitResultId == sub.Id))

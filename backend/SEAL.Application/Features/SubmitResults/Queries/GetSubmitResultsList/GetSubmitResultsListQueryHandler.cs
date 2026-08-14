@@ -38,7 +38,7 @@ namespace SEAL_Application.Features.SubmitResults.Queries.GetSubmitResultsList
             // sẽ thấy lẫn bài nộp của mọi sự kiện khác.
             if (!string.IsNullOrEmpty(request.EventId))
             {
-                query = query.Where(sr => sr.Track!.Round.EventId == request.EventId);
+                query = query.Where(sr => sr.Track!.EventId == request.EventId);
             }
 
             if (!string.IsNullOrEmpty(request.TeamId))
@@ -46,10 +46,9 @@ namespace SEAL_Application.Features.SubmitResults.Queries.GetSubmitResultsList
                 query = query.Where(sr => sr.TeamId == request.TeamId);
             }
 
-            // Lọc theo Vòng thi (Round): suy ra qua Track vì SubmitResult không còn RoundId trực tiếp.
             if (!string.IsNullOrEmpty(request.RoundId))
             {
-                query = query.Where(sr => sr.Track!.RoundId == request.RoundId);
+                query = query.Where(sr => sr.RoundId == request.RoundId);
             }
 
             if (!string.IsNullOrEmpty(request.TrackId))
@@ -80,11 +79,7 @@ namespace SEAL_Application.Features.SubmitResults.Queries.GetSubmitResultsList
                     else if (!string.IsNullOrEmpty(request.TrackId))
                     {
                         var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(request.TrackId);
-                        if (track != null)
-                        {
-                            var trackRound = await _unitOfWork.GetRepository<Round>().GetByIdAsync(track.RoundId);
-                            scopeEventId = trackRound?.EventId;
-                        }
+                        scopeEventId = track?.EventId;
                     }
                     else if (!string.IsNullOrEmpty(request.RoundId))
                     {

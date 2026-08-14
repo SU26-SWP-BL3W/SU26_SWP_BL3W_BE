@@ -1,9 +1,10 @@
+using System;
+
 namespace SEAL_Application.Features.Tracks.Commands.CreateTrack.Models
 {
     public class CreateTrackRequestModel
     {
         public string EventId { get; set; } = string.Empty;
-        public string RoundId { get; set; } = string.Empty;
         public string TrackName { get; set; } = string.Empty;
         public string? TemplateId { get; set; }
         public string? Description { get; set; }

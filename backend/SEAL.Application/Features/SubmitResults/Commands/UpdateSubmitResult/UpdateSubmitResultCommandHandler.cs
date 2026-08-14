@@ -81,28 +81,24 @@ namespace SEAL_Application.Features.SubmitResults.Commands.UpdateSubmitResult
 
             // Không cho SỬA bài nộp sau khi kết quả vòng đã được tính/công bố (tránh đổi bài đã bị chấm).
             var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(submitResult.TrackId);
-            if (track != null)
+            var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(submitResult.RoundId);
+            if (round != null)
             {
-                // HẠN NỘP: chỉ được sửa bài khi hạng mục còn đang mở (ưu tiên Track, fallback Round).
-                var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(track.RoundId);
-                if (round != null)
-                {
-                    var nowUtc = DateTime.UtcNow;
-                    var effectiveStartDate = track.StartDate ?? round.StartDate;
-                    var effectiveEndDate = track.EndDate ?? round.EndDate;
+                var nowUtc = DateTime.UtcNow;
+                var effectiveStartDate = track?.StartDate ?? round.StartDate;
+                var effectiveEndDate = track?.EndDate ?? round.EndDate;
 
-                    if (nowUtc < effectiveStartDate || nowUtc > effectiveEndDate)
-                    {
-                        return BaseException.BadRequestInvaildInputResponse("Ngoài thời gian hạng mục mở nên không thể sửa bài nộp.");
-                    }
-                }
-
-                var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
-                    fr => fr.RoundId == track.RoundId, cancellationToken);
-                if (roundPublished)
+                if (nowUtc < effectiveStartDate || nowUtc > effectiveEndDate)
                 {
-                    return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể sửa bài nộp.");
+                    return BaseException.BadRequestInvaildInputResponse("Ngoài thời gian hạng mục mở nên không thể sửa bài nộp.");
                 }
+            }
+
+            var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
+                fr => fr.RoundId == submitResult.RoundId, cancellationToken);
+            if (roundPublished)
+            {
+                return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể sửa bài nộp.");
             }
 
             // IsActive quyết định bài có được TÍNH KẾT QUẢ hay không -> chỉ Event Coordinator (hoặc Admin)
