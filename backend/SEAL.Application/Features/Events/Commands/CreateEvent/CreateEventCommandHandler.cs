@@ -35,9 +35,9 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent
             }
 
             var currentUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(currentUserId);
-            if (currentUser == null || !currentUser.IsAdmin)
+            if (currentUser == null)
             {
-                return new BaseException.ForbiddenException("Chỉ có Admin mới có quyền tạo Sự kiện mới trong hệ thống.");
+                return new BaseException.UnauthorizedException("Tài khoản người dùng không tồn tại.");
             }
 
             _unitOfWork.BeginTransaction();
