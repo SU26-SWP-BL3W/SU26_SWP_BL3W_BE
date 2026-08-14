@@ -40,6 +40,13 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent
                 return new BaseException.UnauthorizedException("Tài khoản người dùng không tồn tại.");
             }
 
+            var isDuplicate = await _unitOfWork.GetRepository<Event>().Entities
+                .AnyAsync(e => e.EventName.ToLower() == request.Model.EventName.ToLower() && e.Year == request.Model.Year, cancellationToken);
+            if (isDuplicate)
+            {
+                return BaseException.BadRequestDupplicationResponse($"Sự kiện '{request.Model.EventName}' cho năm {request.Model.Year} đã tồn tại trong hệ thống.");
+            }
+
             _unitOfWork.BeginTransaction();
             try
             {
