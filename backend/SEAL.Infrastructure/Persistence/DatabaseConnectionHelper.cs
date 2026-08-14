@@ -17,6 +17,14 @@ namespace SEAL_Infrastructure.Persistence
             var password = databaseSection["Password"];
             var database = databaseSection["Database"];
 
+            // Npgsql mac dinh SSL Mode=Prefer: no THU BAT TAY SSL truoc. Postgres tu
+            // dung tren VPS khong bat SSL se khong tra loi -> treo den timeout, log chi
+            // hien "An error occurred using the connection to database". Cho phep cau
+            // hinh de tro duoc ca 2 loai server:
+            //   - Postgres cua Render (bat buoc SSL) -> khong set, giu mac dinh Prefer
+            //   - Postgres tu dung khong co SSL      -> dat Database__SslMode=Disable
+            var sslMode = databaseSection["SslMode"];
+
             if (string.IsNullOrEmpty(ip) || string.IsNullOrEmpty(port) ||
                 string.IsNullOrEmpty(user) || string.IsNullOrEmpty(password) ||
                 string.IsNullOrEmpty(database))
@@ -25,7 +33,12 @@ namespace SEAL_Infrastructure.Persistence
                     "Database configuration is incomplete. Please ensure all fields (Ip, Port, User, Password, Database) are set in appsettings.json");
             }
 
-            return $"Host={ip};Port={port};Database={database};Username={user};Password={password}";
+            var conn = $"Host={ip};Port={port};Database={database};Username={user};Password={password}";
+            if (!string.IsNullOrWhiteSpace(sslMode))
+            {
+                conn += $";SSL Mode={sslMode};Trust Server Certificate=true";
+            }
+            return conn;
         }
 
         /// <summary>

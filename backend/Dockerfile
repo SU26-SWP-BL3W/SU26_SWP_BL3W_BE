@@ -20,6 +20,15 @@ RUN dotnet publish "SEAL_Backend.csproj" -c Release -o /app/publish /p:UseAppHos
 
 # Stage 3: Run
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+
+# Npgsql can libgssapi khi Postgres dam phan GSSAPI/Kerberos. Image aspnet
+# (Debian slim) khong co san -> loi "Cannot load library libgssapi_krb5.so.2"
+# roi khong ket noi duoc DB. DB cua Render khong dinh vi khong dam phan GSSAPI,
+# nhung Postgres tu dung tren VPS thi co.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 COPY --from=publish /app/publish .
 EXPOSE 8080
