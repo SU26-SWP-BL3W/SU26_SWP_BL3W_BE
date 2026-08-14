@@ -42,6 +42,52 @@ namespace SEAL_Infrastructure.Migrations
                 nullable: false,
                 defaultValue: "");
 
+            // Ba cot moi mac dinh chuoi rong -> vi pham khoa ngoai ben duoi neu bang
+            // da co du lieu. Dien gia tri suy tu lien ket cu TRUOC khi rang buoc FK.
+            // Voi DB trong (moi tao) cac lenh nay khong dong nao bi anh huong.
+
+            // Bai nop: lay vong tu hang muc cu (Track.RoundId), lam truoc khi mat lien ket
+            migrationBuilder.Sql(@"
+                UPDATE ""SubmitResults"" sr
+                SET ""RoundId"" = t.""RoundId""
+                FROM ""Tracks"" t
+                WHERE sr.""TrackId"" = t.""Id"" AND t.""RoundId"" IS NOT NULL;");
+
+            // Hang muc: suy su kien qua vong
+            migrationBuilder.Sql(@"
+                UPDATE ""Tracks"" t
+                SET ""EventId"" = r.""EventId""
+                FROM ""Rounds"" r
+                WHERE t.""RoundId"" = r.""Id"";");
+
+            // Doi: suy hang muc tu bai nop som nhat, thieu thi lay tu phan cong EventRole
+            migrationBuilder.Sql(@"
+                UPDATE ""Teams"" tm
+                SET ""TrackId"" = sub.""TrackId""
+                FROM (
+                    SELECT DISTINCT ON (""TeamId"") ""TeamId"", ""TrackId""
+                    FROM ""SubmitResults"" WHERE ""IsActive"" = true
+                    ORDER BY ""TeamId"", ""CreatedTime""
+                ) sub
+                WHERE tm.""Id"" = sub.""TeamId"";
+
+                UPDATE ""Teams"" tm
+                SET ""TrackId"" = er.""TrackId""
+                FROM ""EventRoles"" er
+                WHERE tm.""TrackId"" IS NULL AND er.""TeamId"" = tm.""Id"" AND er.""TrackId"" IS NOT NULL;");
+
+            // Con dong nao chua suy duoc thi dung ngay, dung de FK bao loi kho hieu
+            migrationBuilder.Sql(@"
+                DO $$
+                DECLARE bad_tracks int; bad_subs int;
+                BEGIN
+                    SELECT count(*) INTO bad_tracks FROM ""Tracks"" WHERE ""EventId"" = '';
+                    SELECT count(*) INTO bad_subs   FROM ""SubmitResults"" WHERE ""RoundId"" = '';
+                    IF bad_tracks > 0 OR bad_subs > 0 THEN
+                        RAISE EXCEPTION 'Khong suy duoc du lieu: % hang muc thieu EventId, % bai nop thieu RoundId', bad_tracks, bad_subs;
+                    END IF;
+                END $$;");
+
             migrationBuilder.CreateIndex(
                 name: "IX_Tracks_EventId",
                 table: "Tracks",
