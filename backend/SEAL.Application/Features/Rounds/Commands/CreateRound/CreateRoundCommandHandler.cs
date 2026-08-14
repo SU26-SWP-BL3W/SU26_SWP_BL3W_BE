@@ -82,7 +82,9 @@ namespace SEAL_Application.Features.Rounds.Commands.CreateRound
                 EndDate = request.Model.EndDate.ToUniversalTime(),
                 AdvancementRule = request.Model.AdvancementRule,
                 ScoringStartDate = request.Model.ScoringStartDate?.ToUniversalTime(),
-                ScoringEndDate = request.Model.ScoringEndDate?.ToUniversalTime()
+                ScoringEndDate = request.Model.ScoringEndDate?.ToUniversalTime(),
+                AppealStartDate = request.Model.AppealStartDate?.ToUniversalTime(),
+                AppealEndDate = request.Model.AppealEndDate?.ToUniversalTime()
             };
 
             await _unitOfWork.GetRepository<Round>().AddAsync(round);
