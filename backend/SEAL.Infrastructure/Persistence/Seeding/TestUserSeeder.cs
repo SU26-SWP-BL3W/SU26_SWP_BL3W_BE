@@ -32,6 +32,7 @@ namespace SEAL_Infrastructure.Persistence.Seeding
                     PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
                     IsAdmin = false,
                     IsApproved = true,
+                    IsEmailVerified = true,
                     IsStudent = false,
                     SchoolId = systemSchool.Id
                 },
@@ -42,6 +43,7 @@ namespace SEAL_Infrastructure.Persistence.Seeding
                     PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
                     IsAdmin = false,
                     IsApproved = true,
+                    IsEmailVerified = true,
                     IsStudent = false,
                     SchoolId = systemSchool.Id
                 },
@@ -52,6 +54,7 @@ namespace SEAL_Infrastructure.Persistence.Seeding
                     PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
                     IsAdmin = false,
                     IsApproved = true,
+                    IsEmailVerified = true,
                     IsStudent = false,
                     SchoolId = systemSchool.Id
                 },
@@ -62,6 +65,7 @@ namespace SEAL_Infrastructure.Persistence.Seeding
                     PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
                     IsAdmin = false,
                     IsApproved = true,
+                    IsEmailVerified = true,
                     IsStudent = false,
                     SchoolId = systemSchool.Id
                 },
@@ -72,6 +76,7 @@ namespace SEAL_Infrastructure.Persistence.Seeding
                     PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
                     IsAdmin = false,
                     IsApproved = true,
+                    IsEmailVerified = true,
                     IsStudent = false,
                     SchoolId = systemSchool.Id
                 },
@@ -82,6 +87,7 @@ namespace SEAL_Infrastructure.Persistence.Seeding
                     PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
                     IsAdmin = false,
                     IsApproved = true,
+                    IsEmailVerified = true,
                     IsStudent = false,
                     SchoolId = systemSchool.Id
                 },
@@ -93,6 +99,7 @@ namespace SEAL_Infrastructure.Persistence.Seeding
                     PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
                     IsAdmin = false,
                     IsApproved = true,
+                    IsEmailVerified = true,
                     IsStudent = true,
                     SchoolId = systemSchool.Id
                 },
@@ -104,6 +111,7 @@ namespace SEAL_Infrastructure.Persistence.Seeding
                     PasswordHash = FixedSaltPasswordHasher.HashPassword("123456"),
                     IsAdmin = false,
                     IsApproved = true,
+                    IsEmailVerified = true,
                     IsStudent = true,
                     SchoolId = systemSchool.Id
                 }
@@ -111,10 +119,16 @@ namespace SEAL_Infrastructure.Persistence.Seeding
 
             foreach (var user in testUsers)
             {
-                if (!await context.Users.AnyAsync(u => u.Email == user.Email))
+                var existing = await context.Users.FirstOrDefaultAsync(u => u.Email == user.Email);
+                if (existing == null)
                 {
                     context.Users.Add(user);
                     _logger.LogInformation("Seeded test User: {Email}", user.Email);
+                }
+                else if (!existing.IsEmailVerified)
+                {
+                    existing.IsEmailVerified = true;
+                    _logger.LogInformation("Updated IsEmailVerified for User: {Email}", user.Email);
                 }
             }
 
