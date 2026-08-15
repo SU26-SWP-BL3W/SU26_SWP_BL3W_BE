@@ -9,6 +9,7 @@ namespace SEAL_Application.Features.Scores.Queries.GetTrackCalibration.Models
         public bool IsCompleted { get; set; }
         public List<CalibrationScoreRow> Scores { get; set; } = new();
         public List<CalibrationCriteriaStat> CriteriaStats { get; set; } = new();
+        public List<CalibrationJudgeStat> JudgeStats { get; set; } = new();
     }
 
     public class CalibrationScoreRow
@@ -26,6 +27,17 @@ namespace SEAL_Application.Features.Scores.Queries.GetTrackCalibration.Models
     {
         public string CriteriaId { get; set; } = string.Empty;
         public string CriteriaName { get; set; } = string.Empty;
+        public decimal Mean { get; set; }
+        public decimal StdDev { get; set; }
+        public decimal Min { get; set; }
+        public decimal Max { get; set; }
+        public int SampleCount { get; set; }
+    }
+
+    public class CalibrationJudgeStat
+    {
+        public string JudgeId { get; set; } = string.Empty;
+        public string JudgeName { get; set; } = string.Empty;
         public decimal Mean { get; set; }
         public decimal StdDev { get; set; }
         public decimal Min { get; set; }

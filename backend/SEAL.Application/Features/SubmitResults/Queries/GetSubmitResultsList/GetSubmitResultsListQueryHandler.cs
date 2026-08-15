@@ -58,6 +58,7 @@ namespace SEAL_Application.Features.SubmitResults.Queries.GetSubmitResultsList
 
             // GIỚI HẠN PHẠM VI XEM: thành viên đội (không phải BTC) chỉ thấy bài nộp của đội MÌNH,
             // bất kể truyền bộ lọc gì. Admin xem tất cả; EC/Judge/Mentor trong đúng sự kiện xem như cũ.
+            bool hideTeamIdentity = false;
             var currentUserId = _currentUserService.UserId;
             if (!string.IsNullOrEmpty(currentUserId))
             {
@@ -100,10 +101,11 @@ namespace SEAL_Application.Features.SubmitResults.Queries.GetSubmitResultsList
                         .Where(r => r.RoleName == EventRoleType.Judge || r.RoleName == EventRoleType.Mentor)
                         .ToList();
                     bool hasEventWideJudgeRole = judgeMentorRoles.Any(r => string.IsNullOrEmpty(r.TrackId));
+                    hideTeamIdentity = roles.Any(r => r.RoleName == EventRoleType.Judge) && !isEventCoordinator;
 
                     if (isEventCoordinator || hasEventWideJudgeRole)
                     {
-                        // EC (hoặc Judge/Mentor cấp sự kiện, không gắn track) -> xem theo bộ lọc như cũ
+                        // EC hoặc Judge/Mentor cấp sự kiện: không thu hẹp track
                     }
                     else if (judgeMentorRoles.Count > 0)
                     {
@@ -125,19 +127,37 @@ namespace SEAL_Application.Features.SubmitResults.Queries.GetSubmitResultsList
                 }
             }
 
-            return await query.ToPagedResultAsync(
+            var paged = await query.ToPagedResultAsync(
                 request,
                 sr => new SubmitResultListItemModel
                 {
                     Id = sr.Id,
                     TeamId = sr.TeamId,
                     TrackId = sr.TrackId ?? string.Empty,
+                    TeamName = sr.Team != null ? sr.Team.Name : null,
                     SubmissionUrl = sr.SubmissionUrl,
+                    RepoUrl = sr.RepoUrl,
+                    DemoUrl = sr.DemoUrl,
+                    SlideUrl = sr.SlideUrl,
                     IsActive = sr.IsActive,
                     CreatedTime = sr.CreatedTime
                 },
                 cancellationToken
             );
+
+            if (hideTeamIdentity)
+            {
+                int n = (request.PageNumber - 1) * request.PageSize;
+                foreach (var item in paged.Data)
+                {
+                    n++;
+                    item.DisplayCode = "T" + n;
+                    item.TeamName = item.DisplayCode;
+                    item.TeamId = string.Empty;
+                }
+            }
+
+            return paged;
         }
     }
 }

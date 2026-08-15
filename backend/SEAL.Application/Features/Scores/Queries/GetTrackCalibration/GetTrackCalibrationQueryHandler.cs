@@ -137,6 +137,31 @@ namespace SEAL_Application.Features.Scores.Queries.GetTrackCalibration
                 .OrderBy(s => s.CriteriaName)
                 .ToList();
 
+            var judgeStats = scores
+                .Where(s => s.IsSubmitted)
+                .GroupBy(s => s.EventRoleId)
+                .Select(g =>
+                {
+                    var values = g.Select(x => x.TotalScore).ToList();
+                    decimal mean = values.Average();
+                    decimal std = values.Count > 1
+                        ? (decimal)Math.Sqrt(values.Select(v => (double)((v - mean) * (v - mean))).Average())
+                        : 0m;
+                    var judge = judges.FirstOrDefault(j => j.Id == g.Key);
+                    return new CalibrationJudgeStat
+                    {
+                        JudgeId = g.Key,
+                        JudgeName = judge?.User?.FullName ?? g.Key,
+                        Mean = Math.Round(mean, 2, MidpointRounding.AwayFromZero),
+                        StdDev = Math.Round(std, 2, MidpointRounding.AwayFromZero),
+                        Min = values.Min(),
+                        Max = values.Max(),
+                        SampleCount = values.Count
+                    };
+                })
+                .OrderBy(s => s.JudgeName)
+                .ToList();
+
             bool isCompleted = judges.Count > 0 && submissions.Count > 0 && missing == 0;
 
             return new TrackCalibrationModel
@@ -145,7 +170,8 @@ namespace SEAL_Application.Features.Scores.Queries.GetTrackCalibration
                 TrackName = track.TrackName,
                 IsCompleted = isCompleted,
                 Scores = rows,
-                CriteriaStats = stats
+                CriteriaStats = stats,
+                JudgeStats = judgeStats
             };
         }
     }

@@ -13,6 +13,13 @@ namespace SEAL_Domain.Entity
         public string TrackId { get; set; } = string.Empty;
         public string RoundId { get; set; } = string.Empty;
         public string SubmissionUrl { get; set; } = string.Empty;
+        public string? RepoUrl { get; set; }
+        public string? DemoUrl { get; set; }
+        public string? SlideUrl { get; set; }
+        public string? RepoHost { get; set; }
+        public string? RepoFullName { get; set; }
+        public int? RepoStars { get; set; }
+        public DateTimeOffset? RepoLastPush { get; set; }
         public string? Description { get; set; }
         public bool IsActive { get; set; } = true;
 

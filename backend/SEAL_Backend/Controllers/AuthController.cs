@@ -129,6 +129,15 @@ namespace SEAL_Backend.Controllers
             return OkResponse(result);
         }
 
+        [HttpPost("resend-verification")]
+        [AllowAnonymous]
+        [ProducesResponseType(typeof(BaseResponse<bool>), 200)]
+        public async Task<IActionResult> ResendVerification([FromBody] SEAL_Application.Features.Users.Commands.ResendEmailVerification.ResendEmailVerificationCommand command)
+        {
+            var result = await _mediator.Send(command);
+            return OkResponse(result);
+        }
+
         [HttpPost("student-profiles")]
         [Authorize]
         [ProducesResponseType(typeof(BaseResponse<UserModel>), 200)]

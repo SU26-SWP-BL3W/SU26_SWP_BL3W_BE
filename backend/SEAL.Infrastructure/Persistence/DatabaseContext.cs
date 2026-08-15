@@ -40,6 +40,7 @@ namespace SEAL_Infrastructure.Persistence
         public DbSet<Appeal> Appeals { get; set; }
         public DbSet<Prize> Prizes { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<AppNotification> AppNotifications { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

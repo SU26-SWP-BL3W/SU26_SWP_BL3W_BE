@@ -25,17 +25,20 @@ namespace SEAL_Application.Features.Teams.Commands.RejectTeamRegistration
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
         private readonly IEmailService _emailService;
+        private readonly INotificationService _notifications;
 
         public RejectTeamRegistrationCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEventRoleChecker eventRoleChecker,
-            IEmailService emailService)
+            IEmailService emailService,
+            INotificationService notifications)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
             _emailService = emailService;
+            _notifications = notifications;
         }
 
         public async Task<Result<bool>> Handle(RejectTeamRegistrationCommand request, CancellationToken cancellationToken)
@@ -79,6 +82,19 @@ namespace SEAL_Application.Features.Teams.Commands.RejectTeamRegistration
             team.LastRejectReason = request.Reason;
             team.LastUpdatedTime = CoreHelper.SystemTimeNow;
             await _unitOfWork.GetRepository<Team>().UpdateAsync(team);
+
+            var leaderIds = await _unitOfWork.GetRepository<EventRole>().Entities
+                .Where(er => er.TeamId == team.Id && er.RoleName == EventRoleType.TeamLeader)
+                .Select(er => er.UserId)
+                .ToListAsync(cancellationToken);
+            await _notifications.NotifyManyAsync(
+                leaderIds,
+                "Đội bị từ chối duyệt",
+                $"Đội {team.Name} bị từ chối: {request.Reason}",
+                "danger",
+                "/my-team",
+                cancellationToken);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // 5. Báo TRƯỞNG NHÓM kèm lý do (lỗi SMTP không chặn nghiệp vụ từ chối)

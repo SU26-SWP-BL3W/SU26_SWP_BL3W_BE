@@ -99,10 +99,13 @@ namespace SEAL_Application.Features.FinalResults.Commands.CalculateRoundResults
                 .ToListAsync(cancellationToken);
             var judgeRoleIds = judgeRoles.Select(j => j.Id).ToHashSet();
 
+            // Chỉ phiếu đã chốt: draft không được tính là đủ phiếu và không vào điểm TB.
             var scores = submissionIds.Count == 0
                 ? new List<Score>()
                 : await _unitOfWork.GetRepository<Score>().Entities
-                    .Where(sc => submissionIds.Contains(sc.SubmitResultId) && judgeRoleIds.Contains(sc.EventRoleId))
+                    .Where(sc => submissionIds.Contains(sc.SubmitResultId)
+                              && judgeRoleIds.Contains(sc.EventRoleId)
+                              && sc.IsSubmitted)
                     .ToListAsync(cancellationToken);
             var scoredPairs = scores.Select(sc => sc.EventRoleId + "|" + sc.SubmitResultId).ToHashSet();
 
