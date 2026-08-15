@@ -35,14 +35,14 @@ namespace SEAL_Infrastructure.Persistence.Seeding
                 {
                     new Track
                     {
-                        RoundId = preliminaryRound.Id,
+                        EventId = preliminaryRound.EventId,
                         TemplateId = template?.Id,
                         TrackName = "Technology & AI",
                         Description = "Track for AI and high-tech software solutions."
                     },
                     new Track
                     {
-                        RoundId = preliminaryRound.Id,
+                        EventId = preliminaryRound.EventId,
                         TemplateId = template?.Id,
                         TrackName = "Social Impact",
                         Description = "Track for solutions targeting social and environmental issues."
@@ -51,7 +51,7 @@ namespace SEAL_Infrastructure.Persistence.Seeding
 
                 context.Tracks.AddRange(tracks);
                 await context.SaveChangesAsync();
-                _logger.LogInformation("Seeded {Count} Tracks for Round: {RoundName}", tracks.Count, preliminaryRound.RoundName);
+                _logger.LogInformation("Seeded {Count} Tracks for Event: {EventId}", tracks.Count, preliminaryRound.EventId);
             }
         }
     }

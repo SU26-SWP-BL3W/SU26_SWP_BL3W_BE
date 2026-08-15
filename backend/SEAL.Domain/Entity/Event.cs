@@ -20,6 +20,7 @@ namespace SEAL_Domain.Entity
 
         // Navigation Properties
         public virtual ICollection<Round> Rounds { get; set; } = new List<Round>();
+        public virtual ICollection<Track> Tracks { get; set; } = new List<Track>();
         public virtual ICollection<EventRole> EventRoles { get; set; } = new List<EventRole>();
         public virtual ICollection<Prize> Prizes { get; set; } = new List<Prize>();
     }

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SEAL_Domain.Entity;
 using System;
@@ -21,11 +21,15 @@ namespace SEAL_Infrastructure.Persistence.Configurations
             builder.Property(t => t.Description)
                 .HasMaxLength(500);
 
-            // Cấu hình liên kết khóa ngoại EventId với chế độ Xóa Cascade
             builder.HasOne(t => t.Event)
                 .WithMany()
                 .HasForeignKey(t => t.EventId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(t => t.Track)
+                .WithMany(tr => tr.Teams)
+                .HasForeignKey(t => t.TrackId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             builder.HasMany(t => t.SubmitResults)
                 .WithOne(sr => sr.Team)

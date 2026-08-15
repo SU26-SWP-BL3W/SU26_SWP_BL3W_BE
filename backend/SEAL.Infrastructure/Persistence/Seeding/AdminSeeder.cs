@@ -39,12 +39,22 @@ namespace SEAL_Infrastructure.Persistence.Seeding
                     PasswordHash = FixedSaltPasswordHasher.HashPassword(_adminSettings.Password),
                     IsAdmin = true,
                     IsApproved = true,
+                    IsEmailVerified = true,
                     IsStudent = false,
                     SchoolId = school?.Id ?? ""
                 };
                 context.Users.Add(adminUser);
                 await context.SaveChangesAsync();
                 _logger.LogInformation("Seeded Admin user: {Email}", _adminSettings.Email);
+            }
+            else
+            {
+                var existing = await context.Users.FirstOrDefaultAsync(u => u.Email == _adminSettings.Email);
+                if (existing != null && !existing.IsEmailVerified)
+                {
+                    existing.IsEmailVerified = true;
+                    await context.SaveChangesAsync();
+                }
             }
         }
     }

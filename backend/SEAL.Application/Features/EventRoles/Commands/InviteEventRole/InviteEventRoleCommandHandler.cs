@@ -65,14 +65,13 @@ namespace SEAL_Application.Features.EventRoles.Commands.InviteEventRole
             string? trackName = null;
             if (!string.IsNullOrEmpty(model.TrackId))
             {
-                var track = await _unitOfWork.GetRepository<Track>().GetQueryable()
-                    .Include(t => t.Round)
-                    .SingleOrDefaultAsync(t => t.Id == model.TrackId, cancellationToken);
+                var track = await _unitOfWork.GetRepository<Track>()
+                    .GetByIdAsync(model.TrackId);
                 if (track == null)
                 {
                     return BaseException.BadRequestNotFoundResponse($"Hạng mục (Track) có ID '{model.TrackId}' không tồn tại.");
                 }
-                if (track.Round.EventId != model.EventId)
+                if (track.EventId != model.EventId)
                 {
                     return BaseException.BadRequestResponse($"Hạng mục có ID '{model.TrackId}' không thuộc sự kiện này.");
                 }

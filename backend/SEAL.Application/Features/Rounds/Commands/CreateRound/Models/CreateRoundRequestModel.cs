@@ -12,5 +12,7 @@ namespace SEAL_Application.Features.Rounds.Commands.CreateRound.Models
         public string? AdvancementRule { get; set; }
         public DateTime? ScoringStartDate { get; set; }
         public DateTime? ScoringEndDate { get; set; }
+        public DateTime? AppealStartDate { get; set; }
+        public DateTime? AppealEndDate { get; set; }
     }
 }

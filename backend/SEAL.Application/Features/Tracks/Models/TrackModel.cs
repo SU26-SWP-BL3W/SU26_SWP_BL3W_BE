@@ -7,7 +7,7 @@ namespace SEAL_Application.Features.Tracks.Models
     public class TrackModel
     {
         public string Id { get; set; } = string.Empty;
-        public string RoundId { get; set; } = string.Empty;
+        public string EventId { get; set; } = string.Empty;
         public string TrackName { get; set; } = string.Empty;
         public string? TemplateId { get; set; }
         public string? Description { get; set; }

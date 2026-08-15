@@ -33,7 +33,7 @@ namespace SEAL_Application.Features.Appeals.Queries.GetAppealsByRound
             }
 
             var query = _unitOfWork.GetRepository<Appeal>().Entities
-                .Where(a => a.SubmitResult.Track!.RoundId == request.RoundId);
+                .Where(a => a.SubmitResult.RoundId == request.RoundId);
 
             // Giới hạn phạm vi xem: chỉ Admin, EC của sự kiện chứa vòng này, hoặc Judge/Mentor
             // được phân công (cấp sự kiện hoặc đúng track trong vòng này) mới xem được danh sách phúc khảo.

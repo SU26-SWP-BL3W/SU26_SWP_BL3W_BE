@@ -100,12 +100,7 @@ namespace SEAL_Application.Features.FinalResults.Queries.GetFinalResultById
             if (!string.IsNullOrEmpty(finalResult.TrackId))
             {
                 var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(finalResult.TrackId);
-                if (track == null)
-                {
-                    return null;
-                }
-                var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(track.RoundId);
-                return round?.EventId;
+                return track?.EventId;
             }
 
             return null;

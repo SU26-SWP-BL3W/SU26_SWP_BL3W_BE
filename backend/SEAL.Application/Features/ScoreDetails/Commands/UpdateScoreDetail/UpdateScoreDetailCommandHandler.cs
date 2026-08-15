@@ -74,15 +74,11 @@ namespace SEAL_Application.Features.ScoreDetails.Commands.UpdateScoreDetail
             var lockedSubmit = await _unitOfWork.GetRepository<SubmitResult>().GetByIdAsync(score.SubmitResultId);
             if (lockedSubmit != null)
             {
-                var lockedTrack = await _unitOfWork.GetRepository<Track>().GetByIdAsync(lockedSubmit.TrackId);
-                if (lockedTrack != null)
+                var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
+                    fr => fr.RoundId == lockedSubmit.RoundId, cancellationToken);
+                if (roundPublished)
                 {
-                    var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
-                        fr => fr.RoundId == lockedTrack.RoundId, cancellationToken);
-                    if (roundPublished)
-                    {
-                        return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể sửa điểm chi tiết.");
-                    }
+                    return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể sửa điểm chi tiết.");
                 }
             }
 

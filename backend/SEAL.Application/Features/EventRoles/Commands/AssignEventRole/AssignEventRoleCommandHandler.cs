@@ -40,14 +40,13 @@ namespace SEAL_Application.Features.EventRoles.Commands.AssignEventRole
             // Kiểm tra TrackId (nếu có)
             if (!string.IsNullOrEmpty(request.Model.TrackId))
             {
-                var track = await _unitOfWork.GetRepository<Track>().GetQueryable()
-                    .Include(t => t.Round)
-                    .SingleOrDefaultAsync(t => t.Id == request.Model.TrackId, cancellationToken);
+                var track = await _unitOfWork.GetRepository<Track>()
+                    .GetByIdAsync(request.Model.TrackId);
                 if (track == null)
                 {
                     return BaseException.BadRequestNotFoundResponse($"Hạng mục (Track) có ID '{request.Model.TrackId}' không tồn tại.");
                 }
-                if (track.Round.EventId != request.Model.EventId)
+                if (track.EventId != request.Model.EventId)
                 {
                     return BaseException.BadRequestResponse($"Hạng mục có ID '{request.Model.TrackId}' không thuộc sự kiện này.");
                 }

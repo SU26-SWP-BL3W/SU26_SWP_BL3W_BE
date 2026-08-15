@@ -78,7 +78,7 @@ namespace SEAL_Application.Features.FinalResults.Commands.UnpublishRoundResults
             if (laterRoundIds.Count > 0)
             {
                 var laterHasSubmissions = await _unitOfWork.GetRepository<SubmitResult>().AnyAsync(
-                    sr => laterRoundIds.Contains(sr.Track!.RoundId), cancellationToken);
+                    sr => laterRoundIds.Contains(sr.RoundId), cancellationToken);
                 var laterHasResults = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
                     fr => fr.RoundId != null && laterRoundIds.Contains(fr.RoundId), cancellationToken);
                 if (laterHasSubmissions || laterHasResults)
