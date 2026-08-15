@@ -43,25 +43,19 @@ namespace SEAL_Application.Features.Tracks.Commands.DeleteTrack
             bool isAdmin = currentUser != null && currentUser.IsAdmin;
 
             bool isOwner = track.CreatedBy == currentUserId;
-            
-            bool isCoordinator = false;
-            var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(track.RoundId);
-            if (round != null)
-            {
-                isCoordinator = await _eventRoleChecker.HasRoleAsync(
-                    currentUserId,
-                    round.EventId,
-                    new[] { SEAL_Domain.Entity.Enums.EventRoleType.EventCoordinator },
-                    cancellationToken);
-            }
+
+            bool isCoordinator = await _eventRoleChecker.HasRoleAsync(
+                currentUserId,
+                track.EventId,
+                new[] { SEAL_Domain.Entity.Enums.EventRoleType.EventCoordinator },
+                cancellationToken);
 
             if (!isAdmin && !isOwner && !isCoordinator)
             {
                 return new BaseException.ForbiddenException("Bạn không có quyền xóa hạng mục này.");
             }
 
-            // 1b. Hạng mục đã có bài nộp -> KHÔNG xóa: bài đã chấm sẽ nổ lỗi FK thô
-            //     (Score -> SubmitResult là Restrict), bài chưa chấm sẽ bị cascade xóa im lặng.
+            // 1b. Hạng mục đã có bài nộp -> KHÔNG xóa
             var hasSubmissions = await _unitOfWork.GetRepository<SubmitResult>().AnyAsync(
                 sr => sr.TrackId == track.Id, cancellationToken);
             if (hasSubmissions)
@@ -69,7 +63,7 @@ namespace SEAL_Application.Features.Tracks.Commands.DeleteTrack
                 return BaseException.BadRequestInvaildInputResponse("Hạng mục đã có bài nộp nên không thể xóa.");
             }
 
-            // 2. Xóa mềm thực thể
+            // 2. Thực hiện xóa
             await _unitOfWork.GetRepository<Track>().DeleteAsync(track);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -77,5 +71,3 @@ namespace SEAL_Application.Features.Tracks.Commands.DeleteTrack
         }
     }
 }
-
-

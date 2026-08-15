@@ -51,6 +51,17 @@ builder.Services.Configure<AdminSettings>(builder.Configuration.GetSection("Admi
 
 var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>();
 
+// Token ky bang HMAC-SHA512 -> khoa BAT BUOC >= 64 byte. JwtSettings.IsValid()
+// chi kiem tra rong nen khoa ngan (vd env var deploy dat sai) van lot qua boot
+// roi nem loi dung luc ky token -> moi login thanh cong deu 500 "unexpected error".
+// Chan tu dau: chet ngay khi khoi dong voi thong bao ro, hien trong log deploy.
+if (jwtSettings is null || Encoding.UTF8.GetByteCount(jwtSettings.SecretKey ?? string.Empty) < 64)
+{
+    throw new InvalidOperationException(
+        "JwtSettings:SecretKey thieu hoac ngan hon 64 byte. HMAC-SHA512 can khoa >= 64 byte. " +
+        "Dat bien moi truong JwtSettings__SecretKey (>= 64 ky tu) tren moi truong deploy roi khoi dong lai.");
+}
+
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;

@@ -35,9 +35,16 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent
             }
 
             var currentUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(currentUserId);
-            if (currentUser == null || !currentUser.IsAdmin)
+            if (currentUser == null)
             {
-                return new BaseException.ForbiddenException("Chỉ có Admin mới có quyền tạo Sự kiện mới trong hệ thống.");
+                return new BaseException.UnauthorizedException("Tài khoản người dùng không tồn tại.");
+            }
+
+            var isDuplicate = await _unitOfWork.GetRepository<Event>().Entities
+                .AnyAsync(e => e.EventName.ToLower() == request.Model.EventName.ToLower() && e.Year == request.Model.Year, cancellationToken);
+            if (isDuplicate)
+            {
+                return BaseException.BadRequestDupplicationResponse($"Sự kiện '{request.Model.EventName}' cho năm {request.Model.Year} đã tồn tại trong hệ thống.");
             }
 
             _unitOfWork.BeginTransaction();
@@ -134,7 +141,7 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent
                         var trackEntity = new Track
                         {
                             Id = trackId,
-                            RoundId = roundId,
+                            EventId = eventEntity.Id,
                             TrackName = trackDto.TrackName,
                             Description = trackDto.Description,
                             TemplateId = trackDto.TemplateId,

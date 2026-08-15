@@ -38,12 +38,11 @@ namespace SEAL_Application.Services
                 case "Tracks":
                     var track = await _unitOfWork.GetRepository<Track>().GetQueryable()
                         .AsNoTracking()
-                        .Include(t => t.Round)
                         .FirstOrDefaultAsync(t => t.Id == id);
                     if (track != null)
                     {
                         trackId = track.Id;
-                        eventId = track.Round?.EventId;
+                        eventId = track.EventId;
                     }
                     break;
 
@@ -66,12 +65,11 @@ namespace SEAL_Application.Services
                     var submitResult = await _unitOfWork.GetRepository<SubmitResult>().GetQueryable()
                         .AsNoTracking()
                         .Include(sr => sr.Track)
-                            .ThenInclude(t => t.Round)
                         .FirstOrDefaultAsync(sr => sr.Id == id);
                     if (submitResult != null)
                     {
                         trackId = submitResult.TrackId;
-                        eventId = submitResult.Track?.Round?.EventId;
+                        eventId = submitResult.Track?.EventId;
                     }
                     break;
 

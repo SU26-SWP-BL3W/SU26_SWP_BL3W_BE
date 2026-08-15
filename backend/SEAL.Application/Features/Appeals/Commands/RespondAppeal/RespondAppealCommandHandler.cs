@@ -39,8 +39,7 @@ namespace SEAL_Application.Features.Appeals.Commands.RespondAppeal
 
             var appeal = await _unitOfWork.GetRepository<Appeal>().Entities
                 .Include(a => a.SubmitResult)
-                    .ThenInclude(sr => sr.Track)
-                        .ThenInclude(t => t.Round)
+                    .ThenInclude(sr => sr.Round)
                 .FirstOrDefaultAsync(a => a.Id == request.AppealId, cancellationToken);
 
             if (appeal == null)
@@ -56,7 +55,7 @@ namespace SEAL_Application.Features.Appeals.Commands.RespondAppeal
             if (!isAdmin)
             {
                 isCoordinator = await _eventRoleChecker.HasRoleAsync(
-                    userId, appeal.SubmitResult.Track!.Round!.EventId, new[] { EventRoleType.EventCoordinator }, cancellationToken);
+                    userId, appeal.SubmitResult.Round!.EventId, new[] { EventRoleType.EventCoordinator }, cancellationToken);
             }
 
             if (!isAdmin && !isCoordinator)

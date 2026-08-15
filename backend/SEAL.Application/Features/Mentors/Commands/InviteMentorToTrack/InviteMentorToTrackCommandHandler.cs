@@ -54,12 +54,11 @@ namespace SEAL_Application.Features.Mentors.Commands.InviteMentorToTrack
                 return BaseException.BadRequestNotFoundResponse($"Sự kiện có ID '{m.EventId}' không tồn tại.");
 
             // 2. Track phải tồn tại và thuộc đúng sự kiện
-            var track = await _unitOfWork.GetRepository<Track>().GetQueryable()
-                .Include(t => t.Round)
-                .SingleOrDefaultAsync(t => t.Id == m.TrackId, cancellationToken);
+            var track = await _unitOfWork.GetRepository<Track>()
+                .GetByIdAsync(m.TrackId);
             if (track == null)
                 return BaseException.BadRequestNotFoundResponse($"Hạng mục (Track) có ID '{m.TrackId}' không tồn tại.");
-            if (track.Round.EventId != m.EventId)
+            if (track.EventId != m.EventId)
                 return BaseException.BadRequestResponse($"Hạng mục '{m.TrackId}' không thuộc sự kiện '{m.EventId}'.");
 
             var email = m.MentorEmail.Trim();

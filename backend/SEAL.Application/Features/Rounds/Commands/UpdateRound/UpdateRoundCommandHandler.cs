@@ -69,9 +69,9 @@ namespace SEAL_Application.Features.Rounds.Commands.UpdateRound
             var isPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
                 fr => fr.RoundId == round.Id, cancellationToken);
             var hasScores = await _unitOfWork.GetRepository<Score>().AnyAsync(
-                s => s.SubmitResult.Track!.RoundId == round.Id, cancellationToken);
+                s => s.SubmitResult.RoundId == round.Id, cancellationToken);
             var hasSubmissions = hasScores || await _unitOfWork.GetRepository<SubmitResult>().AnyAsync(
-                sr => sr.Track!.RoundId == round.Id, cancellationToken);
+                sr => sr.RoundId == round.Id, cancellationToken);
 
             bool timeChanged = round.StartDate != startDateUtc || round.EndDate != endDateUtc;
             bool numberChanged = round.RoundNumber != request.Model.RoundNumber;

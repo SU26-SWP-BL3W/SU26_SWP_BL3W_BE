@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SEAL_Domain.Entity;
 using System;
@@ -26,11 +26,15 @@ namespace SEAL_Infrastructure.Persistence.Configurations
                 .HasForeignKey(sr => sr.TeamId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            // Khoá ngoại BẮT BUỘC trỏ đến Track. Vòng thi (Round) được suy ra qua Track.RoundId,
-            // nên SubmitResult KHÔNG còn khoá ngoại trực tiếp tới Round (đúng với ERD).
             builder.HasOne(sr => sr.Track)
                 .WithMany()
                 .HasForeignKey(sr => sr.TrackId)
+                .IsRequired()
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(sr => sr.Round)
+                .WithMany()
+                .HasForeignKey(sr => sr.RoundId)
                 .IsRequired()
                 .OnDelete(DeleteBehavior.Cascade);
         }

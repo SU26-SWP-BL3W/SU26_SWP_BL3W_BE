@@ -35,7 +35,7 @@ namespace SEAL_Application.Features.Tracks.Queries.GetTrackById
             return new TrackModel
             {
                 Id = track.Id,
-                RoundId = track.RoundId,
+                EventId = track.EventId,
                 TemplateId = track.TemplateId,
                 TrackName = track.TrackName,
                 Description = track.Description,
@@ -76,4 +76,3 @@ namespace SEAL_Application.Features.Tracks.Queries.GetTrackById
         }
     }
 }
-

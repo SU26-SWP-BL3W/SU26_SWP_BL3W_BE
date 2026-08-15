@@ -5,7 +5,7 @@ namespace SEAL_Application.Features.Tracks.Commands.UpdateTrack.Models
     public class UpdateTrackResponseModel
     {
         public string Id { get; set; } = string.Empty;
-        public string RoundId { get; set; } = string.Empty;
+        public string EventId { get; set; } = string.Empty;
         public string TrackName { get; set; } = string.Empty;
         public string? TemplateId { get; set; }
         public string? Description { get; set; }

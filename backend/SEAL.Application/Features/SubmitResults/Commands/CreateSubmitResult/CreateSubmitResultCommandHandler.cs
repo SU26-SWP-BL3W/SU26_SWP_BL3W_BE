@@ -1,4 +1,4 @@
-// [FLOW3-NOPBAI][CreateSubmitResult] Doi nop cac duong link (GitHub Repo, Demo, Slide) cho 1 Hang muc truoc han chot.
+// [FLOW3-NOPBAI][CreateSubmitResult] Doi nop cac duong link (GitHub Repo, Demo, Slide) cho 1 Hang muc (Track) trong 1 Vong thi (Round).
 
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -33,7 +33,7 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
 
         public async Task<Result<CreateSubmitResultResponseModel>> Handle(CreateSubmitResultCommand request, CancellationToken cancellationToken)
         {
-            // 1. Kiểm tra tồn tại khóa ngoại TeamId trong DB (Fix 8)
+            // 1. Kiểm tra tồn tại khóa ngoại TeamId trong DB
             var team = await _unitOfWork.GetRepository<Team>().GetByIdAsync(request.Model.TeamId);
             if (team == null)
             {
@@ -64,15 +64,13 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
                 return new BaseException.ForbiddenException("Bạn không có quyền nộp bài cho nhóm này.");
             }
 
-            // 1b. Đội phải đã ĐĂNG KÝ CHÍNH THỨC (Registered) mới được nộp bài.
-            //     Đội còn Forming (chưa chốt đủ 3-5 TV/duyệt, hoặc vừa bị reject đá về Forming) thì chưa được nộp.
             if (team.Status != SEAL_Domain.Entity.Enums.TeamStatus.Registered)
             {
                 return BaseException.BadRequestInvaildInputResponse(
                     "Đội chưa đăng ký chính thức (chưa chốt đủ thành viên/được duyệt) nên chưa thể nộp bài.");
             }
 
-            // 2. Kiểm tra tồn tại Track
+            // 2. Kiểm tra tồn tại Track & Round
             if (string.IsNullOrEmpty(request.Model.TrackId))
             {
                 return BaseException.BadRequestInvaildInputResponse("TrackId không được để trống.");
@@ -84,17 +82,30 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
                 return BaseException.BadRequestInvaildInputResponse("Track không tồn tại.");
             }
 
-            // 2b. HẠN NỘP: chỉ được nộp trong thời gian hạng mục (ưu tiên Track, fallback Round) đang mở.
-            var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(track.RoundId);
-            if (round == null)
+            // Tìm hoặc xác định RoundId
+            string targetRoundId = request.Model.RoundId;
+            if (string.IsNullOrEmpty(targetRoundId))
             {
-                return BaseException.BadRequestInvaildInputResponse("Vòng thi của hạng mục này không tồn tại.");
+                var firstRound = await _unitOfWork.GetRepository<Round>().GetQueryable()
+                    .Where(r => r.EventId == track.EventId)
+                    .OrderBy(r => r.RoundNumber)
+                    .FirstOrDefaultAsync(cancellationToken);
+                if (firstRound == null)
+                {
+                    return BaseException.BadRequestInvaildInputResponse("Sự kiện chưa có vòng thi nào.");
+                }
+                targetRoundId = firstRound.Id;
             }
 
-            // 2c. Hạng mục phải thuộc ĐÚNG sự kiện mà đội đăng ký (chặn nộp chéo sự kiện).
-            if (round.EventId != team.EventId)
+            var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(targetRoundId);
+            if (round == null)
             {
-                return BaseException.BadRequestInvaildInputResponse("Hạng mục này không thuộc sự kiện mà đội đang tham gia.");
+                return BaseException.BadRequestInvaildInputResponse("Vòng thi không tồn tại.");
+            }
+
+            if (track.EventId != team.EventId || round.EventId != team.EventId)
+            {
+                return BaseException.BadRequestInvaildInputResponse("Hạng mục hoặc Vòng thi này không thuộc sự kiện mà đội đang tham gia.");
             }
 
             var now = DateTime.UtcNow;
@@ -110,8 +121,6 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
                 return BaseException.BadRequestInvaildInputResponse("Đã hết hạn nộp bài cho hạng mục này.");
             }
 
-            // 2c'. Kết quả vòng đã được TÍNH/CÔNG BỐ thì khóa nộp bài mới (đối xứng với khóa sửa/xóa):
-            //      tránh bài nộp "sinh sau" nằm ngoài kết quả đã công bố.
             var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
                 fr => fr.RoundId == round.Id, cancellationToken);
             if (roundPublished)
@@ -119,8 +128,7 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
                 return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể nộp bài.");
             }
 
-            // 2d. VÒNG SAU: đội phải ĐƯỢC ĐI TIẾP (IsAdvanced) từ vòng liền trước mới được nộp bài.
-            //     Vòng đầu tiên (không có vòng nào nhỏ hơn) thì bỏ qua kiểm tra này.
+            // VÒNG SAU: đội phải ĐƯỢC ĐI TIẾP (IsAdvanced) từ vòng liền trước
             var prevRound = await _unitOfWork.GetRepository<Round>().GetQueryable()
                 .AsNoTracking()
                 .Where(r => r.EventId == round.EventId && r.RoundNumber < round.RoundNumber)
@@ -138,74 +146,36 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
                 }
             }
 
-            // 3. Chống nộp trùng: mỗi đội chỉ nộp 1 bài cho mỗi HẠNG MỤC (Track), không phải mỗi Vòng.
-            //    Một vòng có thể có nhiều hạng mục diễn ra song song (vd AI + Web) -> đội phải nộp
-            //    ĐỦ từng hạng mục riêng, mỗi hạng mục 1 bài (trước đây chặn nhầm theo Round khiến đội
-            //    không thể nộp hạng mục thứ 2 trong cùng vòng).
+            // 3. Chống nộp trùng: mỗi đội chỉ nộp 1 bài cho mỗi cặp (Track, Round)
             var isAlreadySubmitted = await _unitOfWork.GetRepository<SubmitResult>().AnyAsync(
-                sr => sr.TeamId == request.Model.TeamId && sr.TrackId == request.Model.TrackId,
+                sr => sr.TeamId == request.Model.TeamId && sr.TrackId == request.Model.TrackId && sr.RoundId == targetRoundId,
                 cancellationToken);
 
             if (isAlreadySubmitted)
             {
-                return BaseException.BadRequestDupplicationResponse("Nhóm đã nộp bài giải cho Hạng mục này trước đó.");
+                return BaseException.BadRequestDupplicationResponse("Nhóm đã nộp bài giải cho Hạng mục này ở Vòng thi này trước đó.");
             }
 
             var submitResult = new SubmitResult
             {
                 TeamId = request.Model.TeamId,
                 TrackId = request.Model.TrackId,
+                RoundId = targetRoundId,
                 SubmissionUrl = request.Model.SubmissionUrl,
                 Description = request.Model.Description,
                 IsActive = true,
-                CreatedBy = currentUserId // ghi lại AI nộp (leader hay EC nộp hộ) để đối chiếu khi có tranh chấp
+                CreatedBy = currentUserId
             };
 
             await _unitOfWork.GetRepository<SubmitResult>().AddAsync(submitResult);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            // 5. CHỐNG RACE nộp trùng: 2 request song song có thể cùng qua check AnyAsync ở bước 3
-            //    (check-rồi-mới-ghi có khoảng hở). Sau khi lưu, kiểm lại số bài của đội trong CÙNG
-            //    HẠNG MỤC (không phải cùng vòng — 1 vòng nhiều hạng mục vẫn phải cho tồn tại song song):
-            //    nếu >1 thì bài NỘP SỚM NHẤT thắng (CreatedTime, hòa thì so Id) — quy tắc thắng/thua
-            //    xác định để mọi request race đều hội tụ về cùng kết luận -> cuối cùng còn đúng 1 bài.
-            //    Ai phát hiện xung đột thì dọn TẤT CẢ bài thua (kể cả của request khác — cùng 1 đội,
-            //    bài vừa tạo trong khoảnh khắc race, chưa thể có điểm).
-            var rivals = await _unitOfWork.GetRepository<SubmitResult>().GetQueryable()
-                .AsNoTracking()
-                .Where(sr => sr.TeamId == request.Model.TeamId && sr.TrackId == request.Model.TrackId)
-                .Select(sr => new { sr.Id, sr.CreatedTime })
-                .ToListAsync(cancellationToken);
-            if (rivals.Count > 1)
-            {
-                var winnerId = rivals.OrderBy(r => r.CreatedTime).ThenBy(r => r.Id, StringComparer.Ordinal).First().Id;
-                var loserIds = rivals.Where(r => r.Id != winnerId).Select(r => r.Id).ToList();
-                try
-                {
-                    var repo = _unitOfWork.GetRepository<SubmitResult>();
-                    foreach (var loserId in loserIds)
-                    {
-                        var loser = await repo.GetByIdAsync(loserId);
-                        if (loser != null) repo.Delete(loser);
-                    }
-                    await _unitOfWork.SaveChangesAsync(cancellationToken);
-                }
-                catch
-                {
-                    // Request race còn lại có thể đã dọn cùng lúc — bỏ qua lỗi dọn dẹp,
-                    // trạng thái cuối vẫn hội tụ về 1 bài nhờ quy tắc thắng/thua xác định.
-                }
-                if (loserIds.Contains(submitResult.Id))
-                {
-                    return BaseException.BadRequestDupplicationResponse("Nhóm đã nộp bài giải cho Hạng mục này trước đó.");
-                }
-            }
 
             return new CreateSubmitResultResponseModel
             {
                 Id = submitResult.Id,
                 TeamId = submitResult.TeamId,
                 TrackId = submitResult.TrackId,
+                RoundId = submitResult.RoundId,
                 SubmissionUrl = submitResult.SubmissionUrl,
                 Description = submitResult.Description ?? string.Empty,
                 IsActive = submitResult.IsActive,
@@ -214,4 +184,3 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
         }
     }
 }
-

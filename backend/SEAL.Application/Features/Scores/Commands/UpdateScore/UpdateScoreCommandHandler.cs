@@ -108,14 +108,10 @@ namespace SEAL_Application.Features.Scores.Commands.UpdateScore
             var submit = await _unitOfWork.GetRepository<SubmitResult>().GetByIdAsync(score.SubmitResultId);
             if (submit != null)
             {
-                var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(submit.TrackId);
-                if (track != null)
-                {
-                    var published = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
-                        fr => fr.RoundId == track.RoundId, cancellationToken);
-                    if (published)
-                        return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể sửa phiếu chấm.");
-                }
+                var published = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
+                    fr => fr.RoundId == submit.RoundId, cancellationToken);
+                if (published)
+                    return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể sửa phiếu chấm.");
             }
 
             // 4. Cập nhật

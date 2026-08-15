@@ -7,6 +7,7 @@ using SEAL_Domain.Ultis;
 using SEAL_Application.Features.Tracks.Commands.UpdateTrack.Models;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 
 namespace SEAL_Application.Features.Tracks.Commands.UpdateTrack
 {
@@ -28,49 +29,52 @@ namespace SEAL_Application.Features.Tracks.Commands.UpdateTrack
                 return BaseException.BadRequestNotFoundResponse($"Hạng mục có ID '{request.Id}' không tồn tại.");
             }
 
-            // 2. Kiểm tra Round mới có tồn tại không
-            var newRound = await _unitOfWork.GetRepository<Round>().GetQueryable()
-                .Include(r => r.Event)
-                .FirstOrDefaultAsync(r => r.Id == request.Model.RoundId, cancellationToken);
-            if (newRound == null)
+            // 2. Kiểm tra Event có tồn tại không
+            var targetEventId = string.IsNullOrEmpty(request.Model.EventId) ? track.EventId : request.Model.EventId;
+            var parentEvent = await _unitOfWork.GetRepository<Event>().GetByIdAsync(targetEventId);
+            if (parentEvent == null)
             {
-                return BaseException.BadRequestNotFoundResponse($"Vòng thi có ID '{request.Model.RoundId}' không tồn tại.");
+                return BaseException.BadRequestNotFoundResponse($"Sự kiện có ID '{targetEventId}' không tồn tại.");
             }
 
-            var parentEvent = newRound.Event;
-            if (parentEvent != null)
+            if (request.Model.StartDate.HasValue)
             {
-                if (request.Model.StartDate.HasValue && request.Model.StartDate.Value.ToUniversalTime() < parentEvent.StartDate)
-                    return BaseException.BadRequestResponse($"Thời gian bắt đầu nộp bài không được trước ngày bắt đầu sự kiện ({parentEvent.StartDate:dd/MM/yyyy}).");
-                if (request.Model.EndDate.HasValue && request.Model.EndDate.Value.ToUniversalTime() > parentEvent.EndDate)
-                    return BaseException.BadRequestResponse($"Hạn nộp bài không được vượt quá ngày kết thúc sự kiện ({parentEvent.EndDate:dd/MM/yyyy}).");
-                if (request.Model.ScoringStartDate.HasValue && request.Model.ScoringStartDate.Value.ToUniversalTime() > parentEvent.EndDate)
-                    return BaseException.BadRequestResponse($"Thời gian bắt đầu chấm không được vượt quá ngày kết thúc sự kiện ({parentEvent.EndDate:dd/MM/yyyy}).");
-                if (request.Model.ScoringEndDate.HasValue && request.Model.ScoringEndDate.Value.ToUniversalTime() > parentEvent.EndDate)
-                    return BaseException.BadRequestResponse($"Hạn chót chấm điểm không được vượt quá ngày kết thúc sự kiện ({parentEvent.EndDate:dd/MM/yyyy}).");
+                var st = request.Model.StartDate.Value.ToUniversalTime();
+                if (st < parentEvent.StartDate || st > parentEvent.EndDate)
+                    return BaseException.BadRequestResponse($"Thời gian bắt đầu nộp bài phải nằm trong khoảng diễn ra sự kiện ({parentEvent.StartDate:dd/MM/yyyy} - {parentEvent.EndDate:dd/MM/yyyy}).");
+            }
+            if (request.Model.EndDate.HasValue)
+            {
+                var et = request.Model.EndDate.Value.ToUniversalTime();
+                if (et < parentEvent.StartDate || et > parentEvent.EndDate)
+                    return BaseException.BadRequestResponse($"Hạn nộp bài phải nằm trong khoảng diễn ra sự kiện ({parentEvent.StartDate:dd/MM/yyyy} - {parentEvent.EndDate:dd/MM/yyyy}).");
+            }
+            if (request.Model.ScoringStartDate.HasValue)
+            {
+                var sst = request.Model.ScoringStartDate.Value.ToUniversalTime();
+                if (sst < parentEvent.StartDate || sst > parentEvent.EndDate)
+                    return BaseException.BadRequestResponse($"Thời gian bắt đầu chấm phải nằm trong khoảng diễn ra sự kiện ({parentEvent.StartDate:dd/MM/yyyy} - {parentEvent.EndDate:dd/MM/yyyy}).");
+            }
+            if (request.Model.ScoringEndDate.HasValue)
+            {
+                var set = request.Model.ScoringEndDate.Value.ToUniversalTime();
+                if (set < parentEvent.StartDate || set > parentEvent.EndDate)
+                    return BaseException.BadRequestResponse($"Hạn chót chấm điểm phải nằm trong khoảng diễn ra sự kiện ({parentEvent.StartDate:dd/MM/yyyy} - {parentEvent.EndDate:dd/MM/yyyy}).");
             }
 
-            // 2b. ĐỔI VÒNG của hạng mục bị siết: bài nộp/deadline/chuỗi đi tiếp đều bám theo vòng.
-            //     - Không được chuyển sang vòng của SỰ KIỆN khác (bứng cả bài nộp lệch sự kiện).
-            //     - Đã có bài nộp thì không chuyển vòng (deadline/chống trùng/đi tiếp loạn hết).
-            if (request.Model.RoundId != track.RoundId)
+            // 2b. Kiểm tra ĐỔI EVENT: Đã có bài nộp thì cấm đổi Event
+            if (!string.IsNullOrEmpty(request.Model.EventId) && request.Model.EventId != track.EventId)
             {
-                var oldRound = await _unitOfWork.GetRepository<Round>().GetByIdAsync(track.RoundId);
-                if (oldRound != null && newRound.EventId != oldRound.EventId)
-                {
-                    return BaseException.BadRequestInvaildInputResponse("Không thể chuyển hạng mục sang vòng của sự kiện khác.");
-                }
                 var trackHasSubmissions = await _unitOfWork.GetRepository<SubmitResult>().AnyAsync(
                     sr => sr.TrackId == track.Id, cancellationToken);
                 if (trackHasSubmissions)
                 {
-                    return BaseException.BadRequestInvaildInputResponse("Hạng mục đã có bài nộp nên không thể chuyển sang vòng khác.");
+                    return BaseException.BadRequestInvaildInputResponse("Hạng mục đã có bài nộp nên không thể chuyển sang sự kiện khác.");
                 }
             }
 
-            // 2c. Đã có phiếu chấm trên hạng mục -> cấm đổi bộ tiêu chí (phiếu cũ chấm theo template cũ,
-            //     phiếu mới theo template mới -> hai thang điểm trộn lẫn).
-            if (track.TemplateId != request.Model.TemplateId)
+            // 2c. Đã có phiếu chấm trên hạng mục -> cấm đổi bộ tiêu chí (chỉ kiểm tra khi FE có gửi TemplateId mới)
+            if (request.Model.TemplateId != null && request.Model.TemplateId != track.TemplateId)
             {
                 var trackHasScores = await _unitOfWork.GetRepository<Score>().AnyAsync(
                     s => s.SubmitResult.TrackId == track.Id, cancellationToken);
@@ -80,17 +84,20 @@ namespace SEAL_Application.Features.Tracks.Commands.UpdateTrack
                 }
             }
 
-            // 3. Kiểm tra trùng tên Track trong cùng một Round (loại trừ chính nó)
-            var isDuplicate = await _unitOfWork.GetRepository<Track>().AnyAsync(
-                t => t.TrackName.ToLower() == request.Model.TrackName.ToLower() && t.RoundId == request.Model.RoundId && t.Id != request.Id,
-                cancellationToken);
-
-            if (isDuplicate)
+            // 3. Kiểm tra trùng tên Track trong cùng một Event (loại trừ chính nó)
+            if (!string.IsNullOrWhiteSpace(request.Model.TrackName))
             {
-                return BaseException.BadRequestDupplicationResponse($"Hạng mục '{request.Model.TrackName}' đã tồn tại trong vòng thi này.");
+                var isDuplicate = await _unitOfWork.GetRepository<Track>().AnyAsync(
+                    t => t.TrackName.ToLower() == request.Model.TrackName.ToLower() && t.EventId == targetEventId && t.Id != request.Id,
+                    cancellationToken);
+
+                if (isDuplicate)
+                {
+                    return BaseException.BadRequestDupplicationResponse($"Hạng mục '{request.Model.TrackName}' đã tồn tại trong sự kiện này.");
+                }
             }
 
-            // 4. Kiểm tra Template nếu có
+            // 4. Kiểm tra Template nếu có gửi
             if (!string.IsNullOrEmpty(request.Model.TemplateId))
             {
                 var template = await _unitOfWork.GetRepository<Template>().GetByIdAsync(request.Model.TemplateId);
@@ -109,16 +116,16 @@ namespace SEAL_Application.Features.Tracks.Commands.UpdateTrack
                 }
             }
 
-            // 5. Cập nhật thông tin
-            track.RoundId = request.Model.RoundId;
-            track.TemplateId = request.Model.TemplateId;
-            track.TrackName = request.Model.TrackName;
-            track.Description = request.Model.Description;
-            track.SubmissionRuleDescription = request.Model.SubmissionRuleDescription;
-            track.StartDate = request.Model.StartDate?.ToUniversalTime();
-            track.EndDate = request.Model.EndDate?.ToUniversalTime();
-            track.ScoringStartDate = request.Model.ScoringStartDate?.ToUniversalTime();
-            track.ScoringEndDate = request.Model.ScoringEndDate?.ToUniversalTime();
+            // 5. Cập nhật thông tin (chỉ cập nhật những trường được gửi lên, tránh xóa nhầm dữ liệu)
+            if (!string.IsNullOrEmpty(request.Model.EventId)) track.EventId = request.Model.EventId;
+            if (!string.IsNullOrWhiteSpace(request.Model.TrackName)) track.TrackName = request.Model.TrackName;
+            if (request.Model.TemplateId != null) track.TemplateId = request.Model.TemplateId;
+            if (request.Model.Description != null) track.Description = request.Model.Description;
+            if (request.Model.SubmissionRuleDescription != null) track.SubmissionRuleDescription = request.Model.SubmissionRuleDescription;
+            if (request.Model.StartDate.HasValue) track.StartDate = request.Model.StartDate.Value.ToUniversalTime();
+            if (request.Model.EndDate.HasValue) track.EndDate = request.Model.EndDate.Value.ToUniversalTime();
+            if (request.Model.ScoringStartDate.HasValue) track.ScoringStartDate = request.Model.ScoringStartDate.Value.ToUniversalTime();
+            if (request.Model.ScoringEndDate.HasValue) track.ScoringEndDate = request.Model.ScoringEndDate.Value.ToUniversalTime();
             track.LastUpdatedTime = CoreHelper.SystemTimeNow;
 
             // 6. Lưu vào Database
@@ -128,7 +135,7 @@ namespace SEAL_Application.Features.Tracks.Commands.UpdateTrack
             return new UpdateTrackResponseModel
             {
                 Id = track.Id,
-                RoundId = track.RoundId,
+                EventId = track.EventId,
                 TemplateId = track.TemplateId,
                 TrackName = track.TrackName,
                 Description = track.Description,
@@ -142,4 +149,3 @@ namespace SEAL_Application.Features.Tracks.Commands.UpdateTrack
         }
     }
 }
-
