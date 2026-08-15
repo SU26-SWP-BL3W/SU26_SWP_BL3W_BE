@@ -5,6 +5,7 @@ using SEAL_Domain.Entity;
 using SEAL_Domain.Ultis;
 using SEAL_Application.Features.Events.Commands.UpdateEvent.Models;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -69,6 +70,34 @@ namespace SEAL_Application.Features.Events.Commands.UpdateEvent
                 {
                     return BaseException.BadRequestInvaildInputResponse(
                         $"Số đội tối đa ({request.Model.MaxTeams}) không được nhỏ hơn số đội hiện tại đã đăng ký ({currentTeamCount} đội).");
+                }
+            }
+
+            // 2d. Chặn công bố sự kiện (Status = true) khi chưa đủ cấu hình Vòng thi & Hạng mục
+            if (request.Model.Status)
+            {
+                var rounds = await _unitOfWork.GetRepository<Round>().GetQueryable()
+                    .Where(r => r.EventId == eventEntity.Id)
+                    .ToListAsync(cancellationToken);
+
+                if (rounds.Count == 0)
+                {
+                    return BaseException.BadRequestInvaildInputResponse("Không thể công bố sự kiện khi chưa có Vòng thi nào.");
+                }
+
+                var invalidRounds = rounds.Where(r => r.ScoringEndDate == null || r.StartDate >= r.EndDate).ToList();
+                if (invalidRounds.Any())
+                {
+                    return BaseException.BadRequestInvaildInputResponse("Không thể công bố sự kiện khi có Vòng thi chưa điền hạn chót chấm điểm hoặc mốc thời gian không hợp lệ.");
+                }
+
+                var hasTracks = await _unitOfWork.GetRepository<Track>().AnyAsync(
+                    t => t.EventId == eventEntity.Id,
+                    cancellationToken);
+
+                if (!hasTracks)
+                {
+                    return BaseException.BadRequestInvaildInputResponse("Không thể công bố sự kiện khi chưa có Hạng mục thi (Track) nào.");
                 }
             }
 

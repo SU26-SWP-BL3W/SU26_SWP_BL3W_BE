@@ -17,6 +17,7 @@ using SEAL_Application.Features.Teams.Commands.RemoveTeamMember;
 using SEAL_Application.Features.Teams.Commands.LeaveTeam;
 using SEAL_Application.Features.Teams.Commands.InviteTeamMember;
 using SEAL_Application.Features.Teams.Commands.InviteTeamMember.Models;
+using SEAL_Application.Features.Teams.Commands.CancelTeamInvitation;
 using SEAL_Application.Features.Teams.Commands.RespondTeamInvitation;
 using SEAL_Application.Features.Teams.Commands.ConfirmTeamRegistration;
 using SEAL_Application.Features.Teams.Commands.ApproveTeamRegistration;
@@ -259,6 +260,24 @@ namespace SEAL_Backend.Controllers
         public async Task<IActionResult> InviteMember(string teamId, [FromBody] InviteTeamMemberRequestModel requestModel)
         {
             var result = await _mediator.Send(new InviteTeamMemberCommand { TeamId = teamId, Model = requestModel });
+            return OkResponse(result);
+        }
+
+        /// <summary>
+        /// Đội trưởng hủy/rút lại lời mời gia nhập đội đã gửi.
+        /// </summary>
+        /// <param name="teamId">ID của nhóm.</param>
+        /// <param name="invitationId">ID của lời mời.</param>
+        /// <returns>Kết quả hủy lời mời.</returns>
+        [HttpDelete("{teamId}/invitations/{invitationId}")]
+        [EventRoleAuthorize(EventRoleType.EventCoordinator, EventRoleType.TeamLeader)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), 200)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(403)]
+        [ProducesResponseType(404)]
+        public async Task<IActionResult> CancelInvitation(string teamId, string invitationId)
+        {
+            var result = await _mediator.Send(new CancelTeamInvitationCommand { TeamId = teamId, InvitationId = invitationId });
             return OkResponse(result);
         }
 
