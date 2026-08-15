@@ -33,6 +33,11 @@ namespace SEAL_Application.Features.FinalResults.Queries.GetFinalResultsByRoundI
             var query = _unitOfWork.GetRepository<FinalResult>().Entities
                 .Where(f => f.RoundId == request.RoundId);
 
+            if (!string.IsNullOrWhiteSpace(request.TrackId))
+            {
+                query = query.Where(f => f.TrackId == request.TrackId);
+            }
+
             // CHỈ EventCoordinator (của sự kiện chứa vòng này) hoặc Admin được xem kết quả NHÁP
             // (chưa công bố). Mọi người khác chỉ thấy kết quả ĐÃ công bố (IsPublished = true).
             if (!await IsPrivilegedViewerAsync(request.RoundId, cancellationToken))

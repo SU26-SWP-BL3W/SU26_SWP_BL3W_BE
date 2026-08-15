@@ -64,16 +64,25 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
                 return new BaseException.ForbiddenException("Bạn không có quyền nộp bài cho nhóm này.");
             }
 
+            if (team.Status == SEAL_Domain.Entity.Enums.TeamStatus.Disqualified)
+            {
+                return BaseException.BadRequestInvaildInputResponse("Đội đã bị loại nên không thể nộp bài.");
+            }
+
             if (team.Status != SEAL_Domain.Entity.Enums.TeamStatus.Registered)
             {
                 return BaseException.BadRequestInvaildInputResponse(
                     "Đội chưa đăng ký chính thức (chưa chốt đủ thành viên/được duyệt) nên chưa thể nộp bài.");
             }
 
-            // 2. Kiểm tra tồn tại Track & Round
-            if (string.IsNullOrEmpty(request.Model.TrackId))
+            if (string.IsNullOrEmpty(team.TrackId) || request.Model.TrackId != team.TrackId)
             {
-                return BaseException.BadRequestInvaildInputResponse("TrackId không được để trống.");
+                return BaseException.BadRequestInvaildInputResponse("Đội chỉ được nộp bài cho hạng mục đã đăng ký.");
+            }
+
+            if (string.IsNullOrEmpty(request.Model.RoundId))
+            {
+                return BaseException.BadRequestInvaildInputResponse("RoundId không được để trống.");
             }
 
             var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(request.Model.TrackId);
@@ -82,22 +91,7 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
                 return BaseException.BadRequestInvaildInputResponse("Track không tồn tại.");
             }
 
-            // Tìm hoặc xác định RoundId
-            string targetRoundId = request.Model.RoundId;
-            if (string.IsNullOrEmpty(targetRoundId))
-            {
-                var firstRound = await _unitOfWork.GetRepository<Round>().GetQueryable()
-                    .Where(r => r.EventId == track.EventId)
-                    .OrderBy(r => r.RoundNumber)
-                    .FirstOrDefaultAsync(cancellationToken);
-                if (firstRound == null)
-                {
-                    return BaseException.BadRequestInvaildInputResponse("Sự kiện chưa có vòng thi nào.");
-                }
-                targetRoundId = firstRound.Id;
-            }
-
-            var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(targetRoundId);
+            var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(request.Model.RoundId);
             if (round == null)
             {
                 return BaseException.BadRequestInvaildInputResponse("Vòng thi không tồn tại.");
@@ -109,16 +103,14 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
             }
 
             var now = DateTime.UtcNow;
-            var effectiveStartDate = track.StartDate ?? round.StartDate;
-            var effectiveEndDate = track.EndDate ?? round.EndDate;
-
-            if (now < effectiveStartDate)
+            // Cửa sổ nộp theo Round — Track.EndDate là deadline cả event, không dùng để chặn từng vòng.
+            if (now < round.StartDate)
             {
-                return BaseException.BadRequestInvaildInputResponse("Hạng mục chưa mở, chưa thể nộp bài.");
+                return BaseException.BadRequestInvaildInputResponse("Vòng thi chưa mở, chưa thể nộp bài.");
             }
-            if (now > effectiveEndDate)
+            if (now > round.EndDate)
             {
-                return BaseException.BadRequestInvaildInputResponse("Đã hết hạn nộp bài cho hạng mục này.");
+                return BaseException.BadRequestInvaildInputResponse("Đã hết hạn nộp bài cho vòng thi này.");
             }
 
             var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
@@ -128,7 +120,6 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
                 return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể nộp bài.");
             }
 
-            // VÒNG SAU: đội phải ĐƯỢC ĐI TIẾP (IsAdvanced) từ vòng liền trước
             var prevRound = await _unitOfWork.GetRepository<Round>().GetQueryable()
                 .AsNoTracking()
                 .Where(r => r.EventId == round.EventId && r.RoundNumber < round.RoundNumber)
@@ -137,18 +128,20 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
             if (prevRound != null)
             {
                 var advanced = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
-                    fr => fr.TeamId == team.Id && fr.RoundId == prevRound.Id && fr.IsAdvanced,
+                    fr => fr.TeamId == team.Id
+                       && fr.RoundId == prevRound.Id
+                       && fr.TrackId == team.TrackId
+                       && fr.IsAdvanced,
                     cancellationToken);
                 if (!advanced)
                 {
                     return BaseException.BadRequestInvaildInputResponse(
-                        $"Đội chưa vượt qua vòng trước ('{prevRound.RoundName}') nên không thể nộp bài cho vòng này.");
+                        $"Đội chưa vượt qua vòng trước ('{prevRound.RoundName}') ở hạng mục này nên không thể nộp bài.");
                 }
             }
 
-            // 3. Chống nộp trùng: mỗi đội chỉ nộp 1 bài cho mỗi cặp (Track, Round)
             var isAlreadySubmitted = await _unitOfWork.GetRepository<SubmitResult>().AnyAsync(
-                sr => sr.TeamId == request.Model.TeamId && sr.TrackId == request.Model.TrackId && sr.RoundId == targetRoundId,
+                sr => sr.TeamId == request.Model.TeamId && sr.TrackId == request.Model.TrackId && sr.RoundId == round.Id,
                 cancellationToken);
 
             if (isAlreadySubmitted)
@@ -160,7 +153,7 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
             {
                 TeamId = request.Model.TeamId,
                 TrackId = request.Model.TrackId,
-                RoundId = targetRoundId,
+                RoundId = round.Id,
                 SubmissionUrl = request.Model.SubmissionUrl,
                 Description = request.Model.Description,
                 IsActive = true,
