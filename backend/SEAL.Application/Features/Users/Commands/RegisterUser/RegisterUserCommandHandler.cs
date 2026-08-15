@@ -71,7 +71,7 @@ namespace SEAL_Application.Features.Users.Commands.RegisterUser
                 user.PasswordHash = FixedSaltPasswordHasher.HashPassword(request.Model.Password);
                 user.FullName = fullName;
                 user.IsTemporary = false;
-                user.IsEmailVerified = false;
+                user.IsEmailVerified = true; // Auto-verify (chưa cấu hình SMTP): cho login được ngay, IsApproved vẫn false để EC duyệt hồ sơ
                 user.IsApproved = false;
                 user.EmailVerificationToken = emailVerificationToken;
                 user.EmailVerificationExpiry = emailVerificationExpiry;
@@ -89,8 +89,9 @@ namespace SEAL_Application.Features.Users.Commands.RegisterUser
                     FullName = fullName,
                     IsStudent = false,
                     IsAdmin = false, // Không cho phép tự đăng ký làm Admin
-                    IsApproved = false, // Sẽ được approve sau khi xác thực email thành công
-                    IsEmailVerified = false,
+                    IsApproved = false, // EC/Admin duyệt hồ sơ SV sau (login KHÔNG chặn theo cái này)
+                    IsEmailVerified = true, // Auto-verify (chưa cấu hình SMTP) -> đăng ký xong login được ngay
+
                     EmailVerificationToken = emailVerificationToken,
                     EmailVerificationExpiry = emailVerificationExpiry,
                     IsFpt = false,
