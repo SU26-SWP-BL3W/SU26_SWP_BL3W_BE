@@ -1,0 +1,17 @@
+{
+  "Database": {
+    "Ip": "dpg-d9tstb2jobas73dpeld0-a.oregon-postgres.render.com",
+    "Port": "5432",
+    "User": "seal_bl3w_db_user",
+    "Password": "EpO4IbgovuNVhaVANneraIPY7iqSHujJ",
+    "Database": "seal_bl3w_db",
+    "SslMode": "Require"
+  },
+  "JwtSettings": {
+    "SecretKey": "ThisIsAVerySecretKeyForLocalDevelopmentOnlyPleaseChangeItInProduction1234567890",
+    "Issuer": "SealBL3W",
+    "Audience": "SealBL3W",
+    "AccessTokenExpirationMinutes": 120,
+    "RefreshTokenExpirationDays": 7
+  }
+}
