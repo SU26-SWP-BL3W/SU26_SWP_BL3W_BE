@@ -65,18 +65,17 @@ namespace SEAL_Application.Features.Users.Queries.GetAllUsers
             }
 
             // Chỉ lấy user ĐÃ NỘP hồ sơ thí sinh (cho màn xét duyệt):
-            // loại user chưa từng cập nhật hồ sơ + tài khoản mời (judge/mentor, IsStudent=false).
-            // Bất biến "đã nộp hồ sơ" = IsStudent (chỉ UpdateStudentProfile set) + SchoolId (luôn bắt buộc).
-            // KHÔNG đòi StudentCode/PhotoStudentCardUrl: MSSV chỉ bắt buộc với SV FPT, ảnh thẻ chỉ với SV ngoài FPT.
+            // loại user chưa từng cập nhật hồ sơ + tài khoản mời (judge/mentor, IsStudent=false hoặc IsTemporary=true).
+            // Bất biến "đã nộp hồ sơ" = IsStudent (chỉ UpdateStudentProfile set) + SchoolId (luôn bắt buộc) + không phải tài khoản tạm.
             if (request.HasSubmittedProfile.HasValue)
             {
                 if (request.HasSubmittedProfile.Value)
                 {
-                    query = query.Where(u => u.IsStudent && u.SchoolId != null);
+                    query = query.Where(u => u.IsStudent && !u.IsTemporary && u.SchoolId != null);
                 }
                 else
                 {
-                    query = query.Where(u => !u.IsStudent || u.SchoolId == null);
+                    query = query.Where(u => !u.IsStudent || u.IsTemporary || u.SchoolId == null);
                 }
             }
 

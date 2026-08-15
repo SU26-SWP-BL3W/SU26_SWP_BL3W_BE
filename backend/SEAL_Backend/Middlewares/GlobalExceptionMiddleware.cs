@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using SEAL_Domain.Base;
 using SEAL_Domain.Store;
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
@@ -56,8 +58,21 @@ namespace SEAL_Backend.Middlewares
                     statusCodeHelper = Enum.IsDefined(typeof(StatusCodeHelper), errorEx.StatusCode)
                         ? (StatusCodeHelper)errorEx.StatusCode
                         : StatusCodeHelper.ServerError;
-                    errorData = errorEx.ErrorDetail.ErrorMessage;
-                    message = errorEx.Message;
+                    errorData = errorEx.ErrorDetail?.ErrorMessage;
+
+                    if (errorEx.ErrorDetail?.ErrorMessage is IEnumerable<KeyValuePair<string, ICollection<string>>> validationErrors)
+                    {
+                        var firstError = validationErrors.SelectMany(kv => kv.Value).FirstOrDefault();
+                        message = !string.IsNullOrEmpty(firstError) ? firstError : "Dữ liệu gửi lên không hợp lệ.";
+                    }
+                    else if (errorEx.ErrorDetail?.ErrorMessage is string strMsg && !string.IsNullOrEmpty(strMsg))
+                    {
+                        message = strMsg;
+                    }
+                    else
+                    {
+                        message = errorEx.Message;
+                    }
                     break;
 
                 default:
