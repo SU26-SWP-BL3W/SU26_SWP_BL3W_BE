@@ -66,18 +66,20 @@ namespace SEAL_Application.Features.Users.Commands.RegisterUser
             User user;
             if (claimTempAccount)
             {
-                // 4a. Nhận lại tài khoản tạm: cập nhật thông tin đăng ký thật + cấp token xác thực mới
+                // 4a. Nhận lại tài khoản tạm: cập nhật thông tin đăng ký thật + tự động kích hoạt
                 user = existingUser!;
                 user.PasswordHash = FixedSaltPasswordHasher.HashPassword(request.Model.Password);
                 user.FullName = fullName;
                 user.IsTemporary = false;
+                user.IsEmailVerified = true;
+                user.IsApproved = true;
                 user.EmailVerificationToken = emailVerificationToken;
                 user.EmailVerificationExpiry = emailVerificationExpiry;
                 await _unitOfWork.GetRepository<User>().UpdateAsync(user);
             }
             else
             {
-                // 4b. Tạo thực thể User mới
+                // 4b. Tạo thực thể User mới (Tùy chọn A: Tự động verify để thành viên đăng ký xong đăng nhập được ngay)
                 user = new User
                 {
                     SchoolId = null,
@@ -87,8 +89,8 @@ namespace SEAL_Application.Features.Users.Commands.RegisterUser
                     FullName = fullName,
                     IsStudent = false,
                     IsAdmin = false, // Không cho phép tự đăng ký làm Admin
-                    IsApproved = false, // Sẽ được approve sau khi xác thực email thành công
-                    IsEmailVerified = false,
+                    IsApproved = true,
+                    IsEmailVerified = true,
                     EmailVerificationToken = emailVerificationToken,
                     EmailVerificationExpiry = emailVerificationExpiry,
                     IsFpt = false,
