@@ -67,6 +67,12 @@ namespace SEAL_Application.Features.Scores.Commands.CreateScore
                 return BaseException.BadRequestNotFoundResponse($"Bài nộp '{request.Model.SubmitResultId}' không tồn tại.");
             }
 
+            var scoredTeam = await _unitOfWork.GetRepository<Team>().GetByIdAsync(submit.TeamId);
+            if (scoredTeam != null && scoredTeam.Status == SEAL_Domain.Entity.Enums.TeamStatus.Disqualified)
+            {
+                return BaseException.BadRequestInvaildInputResponse("Đội đã bị loại nên không thể chấm bài.");
+            }
+
             // 1c. Giám khảo (Judge) gắn Track chỉ được chấm bài nộp thuộc đúng hạng mục được phân công
             if (eventRole.RoleName == SEAL_Domain.Entity.Enums.EventRoleType.Judge
                 && !string.IsNullOrEmpty(eventRole.TrackId)

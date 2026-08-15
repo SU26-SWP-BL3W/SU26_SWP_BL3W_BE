@@ -101,10 +101,18 @@ namespace SEAL_Application.Features.Teams.Commands.CreateTeam
                 return BaseException.BadRequestInvaildInputResponse($"Sự kiện đã đạt giới hạn số đội ({eventEntity.MaxTeams} đội). Không thể tạo thêm.");
             }
 
+            // 1 đội / 1 hạng mục; Track phải thuộc đúng Event.
+            var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(request.Model.TrackId);
+            if (track == null || track.EventId != request.Model.EventId)
+            {
+                return BaseException.BadRequestInvaildInputResponse("Hạng mục thi không tồn tại hoặc không thuộc sự kiện này.");
+            }
+
             // 4. Tạo Team mới
             var team = new Team
             {
                 EventId = request.Model.EventId,
+                TrackId = request.Model.TrackId,
                 Name = request.Model.Name,
                 Description = request.Model.Description,
                 IsActive = true
@@ -131,6 +139,7 @@ namespace SEAL_Application.Features.Teams.Commands.CreateTeam
                 Id = team.Id,
                 Name = team.Name,
                 Description = team.Description ?? string.Empty,
+                TrackId = team.TrackId,
                 IsActive = team.IsActive,
                 CreatedTime = team.CreatedTime
             };

@@ -73,6 +73,7 @@ namespace SEAL_Application.Features.Teams.Queries.GetMyTeam
                 Status = team.Status.ToString(),
                 IsActive = team.IsActive,
                 EventId = team.EventId,
+                TrackId = team.TrackId,
                 EventName = team.Event?.EventName ?? string.Empty,
                 CreatedTime = team.CreatedTime,
                 LastRejectReason = team.LastRejectReason,

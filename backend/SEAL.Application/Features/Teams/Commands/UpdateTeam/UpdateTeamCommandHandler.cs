@@ -87,13 +87,36 @@ namespace SEAL_Application.Features.Teams.Commands.UpdateTeam
                 return BaseException.BadRequestDupplicationResponse($"Tên nhóm '{request.Model.Name}' đã tồn tại.");
             }
 
+            if (!string.IsNullOrEmpty(request.Model.TrackId) && request.Model.TrackId != team.TrackId)
+            {
+                if (team.Status != SEAL_Domain.Entity.Enums.TeamStatus.Forming)
+                {
+                    return BaseException.BadRequestInvaildInputResponse("Chỉ đổi hạng mục khi đội còn đang lập (Forming).");
+                }
+
+                var hasSubmission = await _unitOfWork.GetRepository<SubmitResult>().AnyAsync(
+                    sr => sr.TeamId == team.Id, cancellationToken);
+                if (hasSubmission)
+                {
+                    return BaseException.BadRequestInvaildInputResponse("Đội đã nộp bài nên không thể đổi hạng mục.");
+                }
+
+                var newTrack = await _unitOfWork.GetRepository<Track>().GetByIdAsync(request.Model.TrackId);
+                if (newTrack == null || newTrack.EventId != team.EventId)
+                {
+                    return BaseException.BadRequestInvaildInputResponse("Hạng mục thi không tồn tại hoặc không thuộc sự kiện này.");
+                }
+
+                team.TrackId = request.Model.TrackId;
+            }
+
             team.Name = request.Model.Name;
             team.Description = request.Model.Description;
             if (request.Model.IsActive.HasValue)
             {
                 team.IsActive = request.Model.IsActive.Value;
             }
-            team.LastUpdatedTime = CoreHelper.SystemTimeNow; // Sử dụng LastUpdatedTime khớp cấu trúc BaseEntity
+            team.LastUpdatedTime = CoreHelper.SystemTimeNow;
 
             teamRepository.Update(team);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -103,6 +126,7 @@ namespace SEAL_Application.Features.Teams.Commands.UpdateTeam
                 Id = team.Id,
                 Name = team.Name,
                 Description = team.Description,
+                TrackId = team.TrackId,
                 IsActive = team.IsActive,
                 LastUpdatedTime = team.LastUpdatedTime
             };

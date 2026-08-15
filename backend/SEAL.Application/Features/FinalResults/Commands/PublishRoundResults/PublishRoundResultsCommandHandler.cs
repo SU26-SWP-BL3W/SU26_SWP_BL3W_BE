@@ -22,15 +22,18 @@ namespace SEAL_Application.Features.FinalResults.Commands.PublishRoundResults
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
+        private readonly IAuditLogService _auditLogService;
 
         public PublishRoundResultsCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
-            IEventRoleChecker eventRoleChecker)
+            IEventRoleChecker eventRoleChecker,
+            IAuditLogService auditLogService)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
+            _auditLogService = auditLogService;
         }
 
         public async Task<Result<bool>> Handle(PublishRoundResultsCommand request, CancellationToken cancellationToken)
@@ -75,6 +78,14 @@ namespace SEAL_Application.Features.FinalResults.Commands.PublishRoundResults
                 fr.IsPublished = true;
             }
             await _unitOfWork.GetRepository<FinalResult>().UpdateRangeAsync(results);
+            await _auditLogService.AppendAsync(
+                AuditActions.PublishRoundResults,
+                AuditEntityTypes.Round,
+                round.Id,
+                round.EventId,
+                $"Công bố kết quả vòng {round.RoundName}: {results.Count} dòng",
+                new { count = results.Count },
+                cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return true;

@@ -62,6 +62,7 @@ namespace SEAL_Application.Features.Teams.Queries.GetTeamsList
                 {
                     Id = t.Id,
                     EventId = t.EventId,
+                    TrackId = t.TrackId,
                     Name = t.Name,
                     Description = t.Description,
                     IsActive = t.IsActive,

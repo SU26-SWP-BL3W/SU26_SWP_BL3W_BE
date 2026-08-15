@@ -12,6 +12,9 @@ namespace SEAL_Application.Features.Teams.Commands.CreateTeam
             RuleFor(x => x.Model.EventId)
                 .NotEmpty().WithMessage("Mã sự kiện (EventId) không được để trống.");
 
+            RuleFor(x => x.Model.TrackId)
+                .NotEmpty().WithMessage("Hạng mục thi (TrackId) không được để trống.");
+
             RuleFor(x => x.Model.Name)
                 .NotEmpty().WithMessage("Tên nhóm không được để trống.")
                 .MaximumLength(150).WithMessage("Tên nhóm không vượt quá 150 ký tự.");

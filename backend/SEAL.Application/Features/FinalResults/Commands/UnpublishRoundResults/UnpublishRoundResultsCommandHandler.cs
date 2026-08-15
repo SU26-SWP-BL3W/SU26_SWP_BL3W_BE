@@ -22,15 +22,18 @@ namespace SEAL_Application.Features.FinalResults.Commands.UnpublishRoundResults
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
+        private readonly IAuditLogService _auditLogService;
 
         public UnpublishRoundResultsCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
-            IEventRoleChecker eventRoleChecker)
+            IEventRoleChecker eventRoleChecker,
+            IAuditLogService auditLogService)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
+            _auditLogService = auditLogService;
         }
 
         public async Task<Result<bool>> Handle(UnpublishRoundResultsCommand request, CancellationToken cancellationToken)
@@ -88,7 +91,15 @@ namespace SEAL_Application.Features.FinalResults.Commands.UnpublishRoundResults
                 }
             }
 
-            // 5. Xóa trọn bộ kết quả của vòng
+            // 5. Xóa trọn bộ kết quả của vòng — ghi audit TRƯỚC SaveChanges để còn dấu vết.
+            await _auditLogService.AppendAsync(
+                AuditActions.UnpublishRoundResults,
+                AuditEntityTypes.Round,
+                round.Id,
+                round.EventId,
+                $"Hủy công bố vòng {round.RoundName}: xóa {results.Count} dòng FinalResult",
+                new { count = results.Count, publishedCount = results.Count(r => r.IsPublished) },
+                cancellationToken);
             await _unitOfWork.GetRepository<FinalResult>().DeleteRangeAsync(results);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 

@@ -47,6 +47,11 @@ namespace SEAL_Application.Features.SubmitResults.Commands.UpdateSubmitResult
                 return BaseException.BadRequestInvaildInputResponse("Nhóm nộp bài không tồn tại.");
             }
 
+            if (team.Status == SEAL_Domain.Entity.Enums.TeamStatus.Disqualified)
+            {
+                return BaseException.BadRequestInvaildInputResponse("Đội đã bị loại nên không thể sửa bài nộp.");
+            }
+
             // Kiểm tra Ownership / Quyền hạn
             var currentUserId = _currentUserService.UserId;
             if (string.IsNullOrEmpty(currentUserId))

@@ -5,6 +5,7 @@ namespace SEAL_Application.Features.FinalResults.Commands.CalculateRoundResults.
         public string Id { get; set; } = string.Empty;
         public string FinalResultId { get; set; } = string.Empty;
         public string TeamId { get; set; } = string.Empty;
+        public string? TrackId { get; set; }
         public string RoundId { get; set; } = string.Empty;
         public string EventId { get; set; } = string.Empty;
         public decimal FinalScore { get; set; }

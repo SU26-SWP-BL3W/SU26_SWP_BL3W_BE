@@ -38,6 +38,7 @@ builder.Services.AddScoped<IEventMetadataResolver, SEAL_Application.Services.Eve
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IEventRoleChecker, SEAL_Application.Services.EventRoleChecker>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IAuditLogService, SEAL_Application.Services.AuditLogService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddSingleton<ICloudStorageService, CloudflyStorageService>();
 builder.Services.AddHttpClient();

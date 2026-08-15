@@ -15,6 +15,9 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
             RuleFor(x => x.Model.TrackId)
                 .NotEmpty().WithMessage("Mã Track (TrackId) không được để trống.");
 
+            RuleFor(x => x.Model.RoundId)
+                .NotEmpty().WithMessage("Mã vòng thi (RoundId) không được để trống.");
+
             RuleFor(x => x.Model.SubmissionUrl)
                 .NotEmpty().WithMessage("Đường dẫn nộp bài (SubmissionUrl) không được để trống.")
                 .MaximumLength(2000).WithMessage("Đường dẫn bài nộp không vượt quá 2000 ký tự.");

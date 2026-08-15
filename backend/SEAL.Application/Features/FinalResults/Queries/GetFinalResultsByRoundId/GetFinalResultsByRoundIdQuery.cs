@@ -9,6 +9,7 @@ namespace SEAL_Application.Features.FinalResults.Queries.GetFinalResultsByRoundI
     public class GetFinalResultsByRoundIdQuery : BasePaginationQuery, IRequest<Result<PagedResult<FinalResultModel>>>
     {
         public string RoundId { get; set; } = string.Empty;
+        public string? TrackId { get; set; }
 
         public override HashSet<string> GetAllowedSortFields() => new(System.StringComparer.OrdinalIgnoreCase)
         {

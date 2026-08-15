@@ -57,6 +57,11 @@ namespace SEAL_Application.Features.Teams.Commands.ConfirmTeamRegistration
                 return BaseException.BadRequestInvaildInputResponse($"Đội không ở trạng thái cho phép đăng ký (hiện tại: {team.Status}).");
             }
 
+            if (string.IsNullOrEmpty(team.TrackId))
+            {
+                return BaseException.BadRequestInvaildInputResponse("Đội chưa đăng ký hạng mục thi nên không thể chốt danh sách.");
+            }
+
             // 3. Quyền: caller là TeamLeader của đội (hoặc Coordinator/Admin)
             var currentUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(currentUserId);
             bool isAdmin = currentUser != null && currentUser.IsAdmin;
