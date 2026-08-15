@@ -114,7 +114,15 @@ namespace SEAL_Application.Features.Users.Commands.RegisterUser
                 noteHtml: $"Liên kết kích hoạt sẽ hết hạn sau {ACTIVATION_EXPIRY_HOURS} giờ.",
                 showLoginHint: false);
 
-            await _emailService.SendEmailAsync(user.Email, "[SEAL] Kích hoạt tài khoản đăng ký", emailBody);
+            try
+            {
+                await _emailService.SendEmailAsync(user.Email, "[SEAL] Kích hoạt tài khoản đăng ký", emailBody);
+            }
+            catch (Exception ex)
+            {
+                // Gửi email là best-effort — không để lỗi SMTP ném 500 làm hỏng cả request tạo tài khoản (tránh tài khoản ma)
+                Console.WriteLine($"[EMAIL_FALLBACK] Không thể gửi email kích hoạt tới {user.Email} (Lỗi: {ex.Message}). Link kích hoạt trực tiếp: {verificationLink}");
+            }
 
             return new UserModel
             {
