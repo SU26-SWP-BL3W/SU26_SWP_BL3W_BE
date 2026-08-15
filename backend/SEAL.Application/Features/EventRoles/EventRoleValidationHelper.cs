@@ -15,13 +15,13 @@ namespace SEAL_Application.Features.EventRoles
         /// Kiểm tra xung đột vai trò của người dùng trong một sự kiện.
         /// Trả về chuỗi thông báo lỗi nếu có xung đột, ngược lại trả về null.
         /// </summary>
-        public static async Task<string> CheckRoleConflictAsync(
+        public static async Task<string?> CheckRoleConflictAsync(
             IUnitOfWork unitOfWork,
             string userId,
             string eventId,
             EventRoleType newRole,
-            string newTrackId,
-            string excludeEventRoleId,
+            string? newTrackId,
+            string? excludeEventRoleId,
             CancellationToken cancellationToken)
         {
             var query = unitOfWork.GetRepository<EventRole>().GetQueryable()

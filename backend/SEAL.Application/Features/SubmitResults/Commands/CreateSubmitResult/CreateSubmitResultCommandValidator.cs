@@ -18,8 +18,20 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
             RuleFor(x => x.Model.RoundId)
                 .NotEmpty().WithMessage("Mã vòng thi (RoundId) không được để trống.");
 
+            RuleFor(x => x.Model)
+                .Must(m => !string.IsNullOrWhiteSpace(m.RepoUrl) || !string.IsNullOrWhiteSpace(m.SubmissionUrl))
+                .WithMessage("Cần đường dẫn GitHub/GitLab (RepoUrl).")
+                .OverridePropertyName("Model.RepoUrl");
+
+            RuleFor(x => x.Model.DemoUrl)
+                .NotEmpty().WithMessage("Cần đường dẫn demo (DemoUrl).")
+                .MaximumLength(2000);
+
+            RuleFor(x => x.Model.SlideUrl)
+                .NotEmpty().WithMessage("Cần đường dẫn slide (SlideUrl).")
+                .MaximumLength(2000);
+
             RuleFor(x => x.Model.SubmissionUrl)
-                .NotEmpty().WithMessage("Đường dẫn nộp bài (SubmissionUrl) không được để trống.")
                 .MaximumLength(2000).WithMessage("Đường dẫn bài nộp không vượt quá 2000 ký tự.");
 
             RuleFor(x => x.Model.Description)

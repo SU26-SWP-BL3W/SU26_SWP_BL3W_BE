@@ -1,6 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using SEAL_Domain.Entity.Enums;
+using System;
 
 namespace SEAL_Application.Features.Teams.Queries.GetTeamsList.Models
 {
@@ -11,6 +10,7 @@ namespace SEAL_Application.Features.Teams.Queries.GetTeamsList.Models
         public string? TrackId { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public TeamStatus Status { get; set; }
         public bool IsActive { get; set; }
         public DateTimeOffset CreatedTime { get; set; }
     }

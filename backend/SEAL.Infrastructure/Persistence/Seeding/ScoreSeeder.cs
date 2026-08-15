@@ -23,7 +23,7 @@ namespace SEAL_Infrastructure.Persistence.Seeding
         {
             if (!await context.Scores.AnyAsync())
             {
-                var submission = await context.SubmitResults.Include(s => s.Track).ThenInclude(t => t.Template).FirstOrDefaultAsync();
+                var submission = await context.SubmitResults.Include(s => s.Track).ThenInclude(t => t!.Template).FirstOrDefaultAsync();
                 var judge = await context.Users.FirstOrDefaultAsync(u => u.Email == "judge1@example.com");
 
                 if (submission == null || judge == null || submission.Track?.TemplateId == null)

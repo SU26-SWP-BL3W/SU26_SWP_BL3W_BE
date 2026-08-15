@@ -94,7 +94,10 @@ namespace SEAL_Backend.Controllers
         /// Lấy danh sách điểm chi tiết theo ID phiếu chấm.
         /// </summary>
         /// <param name="scoreId">ID của phiếu chấm (Score).</param>
-        /// <param name="query">Tham số phân trang.</param>
+        /// <param name="pageNumber">Trang.</param>
+        /// <param name="pageSize">Số dòng mỗi trang.</param>
+        /// <param name="sortBy">Trường sắp xếp.</param>
+        /// <param name="isAscending">true = tăng dần.</param>
         /// <returns>Danh sách điểm chi tiết của phiếu chấm (phân trang).</returns>
         [HttpGet("score/{scoreId}")]
         [EventRoleAuthorize(EventRoleType.EventCoordinator, EventRoleType.Judge)]

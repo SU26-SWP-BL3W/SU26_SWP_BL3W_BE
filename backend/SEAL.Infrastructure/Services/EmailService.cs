@@ -36,8 +36,20 @@ namespace SEAL_Infrastructure.Services
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(host))
+            {
+                throw new InvalidOperationException("Chưa cấu hình EmailSettings:Server.");
+            }
+
+            var senderEmail = _config["EmailSettings:SenderEmail"]
+                ?? throw new InvalidOperationException("Chưa cấu hình EmailSettings:SenderEmail.");
+            var username = _config["EmailSettings:Username"]
+                ?? throw new InvalidOperationException("Chưa cấu hình EmailSettings:Username.");
+            var password = _config["EmailSettings:Password"]
+                ?? throw new InvalidOperationException("Chưa cấu hình EmailSettings:Password.");
+
             var email = new MimeMessage();
-            email.From.Add(MailboxAddress.Parse(_config["EmailSettings:SenderEmail"]));
+            email.From.Add(MailboxAddress.Parse(senderEmail));
             email.To.Add(MailboxAddress.Parse(toEmail));
             email.Subject = subject;
 
@@ -46,8 +58,6 @@ namespace SEAL_Infrastructure.Services
 
             using var smtp = new SmtpClient();
             var port = int.Parse(_config["EmailSettings:Port"] ?? "587");
-            var username = _config["EmailSettings:Username"];
-            var password = _config["EmailSettings:Password"];
 
             await smtp.ConnectAsync(host, port, SecureSocketOptions.StartTls);
             await smtp.AuthenticateAsync(username, password);

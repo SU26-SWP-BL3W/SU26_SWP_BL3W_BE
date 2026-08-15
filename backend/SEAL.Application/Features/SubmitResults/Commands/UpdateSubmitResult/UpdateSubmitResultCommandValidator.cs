@@ -14,7 +14,17 @@ namespace SEAL_Application.Features.SubmitResults.Commands.UpdateSubmitResult
 
             RuleFor(x => x.Model.SubmissionUrl)
                 .MaximumLength(2000).WithMessage("Đường dẫn bài nộp không vượt quá 2000 ký tự.")
-                .When(x => !string.IsNullOrWhiteSpace(x.Model.SubmissionUrl)); // rỗng = giữ URL cũ (handler bỏ qua)
+                .When(x => !string.IsNullOrWhiteSpace(x.Model.SubmissionUrl));
+
+            RuleFor(x => x.Model.RepoUrl)
+                .MaximumLength(2000)
+                .When(x => !string.IsNullOrWhiteSpace(x.Model.RepoUrl));
+            RuleFor(x => x.Model.DemoUrl)
+                .MaximumLength(2000)
+                .When(x => !string.IsNullOrWhiteSpace(x.Model.DemoUrl));
+            RuleFor(x => x.Model.SlideUrl)
+                .MaximumLength(2000)
+                .When(x => !string.IsNullOrWhiteSpace(x.Model.SlideUrl));
 
             RuleFor(x => x.Model.Description)
                 .MaximumLength(1000).WithMessage("Mô tả bài nộp không vượt quá 1000 ký tự.");

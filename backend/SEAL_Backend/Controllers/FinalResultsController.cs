@@ -202,6 +202,10 @@ namespace SEAL_Backend.Controllers
         /// EventCoordinator/Admin xem được cả kết quả NHÁP; người khác chỉ thấy kết quả ĐÃ công bố.
         /// </summary>
         /// <param name="roundId">ID của vòng thi.</param>
+        /// <param name="pageNumber">Trang.</param>
+        /// <param name="pageSize">Số dòng mỗi trang.</param>
+        /// <param name="sortBy">Trường sắp xếp.</param>
+        /// <param name="isAscending">true = tăng dần.</param>
         /// <param name="trackId">Lọc theo hạng mục (optional).</param>
         /// <returns>Bảng xếp hạng các đội (phân trang).</returns>
         [HttpGet("round/{roundId}")]
@@ -232,7 +236,10 @@ namespace SEAL_Backend.Controllers
         /// Lấy lịch sử kết quả chung cuộc của 1 đội qua các vòng thi.
         /// </summary>
         /// <param name="teamId">ID của đội thi.</param>
-        /// <param name="query">Tham số phân trang.</param>
+        /// <param name="pageNumber">Trang.</param>
+        /// <param name="pageSize">Số dòng mỗi trang.</param>
+        /// <param name="sortBy">Trường sắp xếp.</param>
+        /// <param name="isAscending">true = tăng dần.</param>
         /// <returns>Lịch sử kết quả của đội (phân trang).</returns>
         [HttpGet("team/{teamId}")]
         [Authorize]

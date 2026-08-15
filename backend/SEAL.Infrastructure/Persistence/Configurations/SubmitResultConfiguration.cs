@@ -16,7 +16,13 @@ namespace SEAL_Infrastructure.Persistence.Configurations
 
             builder.Property(sr => sr.SubmissionUrl)
                 .IsRequired()
-                .HasMaxLength(500);
+                .HasMaxLength(2000);
+
+            builder.Property(sr => sr.RepoUrl).HasMaxLength(2000);
+            builder.Property(sr => sr.DemoUrl).HasMaxLength(2000);
+            builder.Property(sr => sr.SlideUrl).HasMaxLength(2000);
+            builder.Property(sr => sr.RepoHost).HasMaxLength(16);
+            builder.Property(sr => sr.RepoFullName).HasMaxLength(200);
 
             builder.Property(sr => sr.Description)
                 .HasMaxLength(1000);

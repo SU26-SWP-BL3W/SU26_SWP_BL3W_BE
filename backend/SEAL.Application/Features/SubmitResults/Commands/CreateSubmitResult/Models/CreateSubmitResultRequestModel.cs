@@ -10,6 +10,9 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult.Mo
         public string TrackId { get; set; } = string.Empty;
         public string RoundId { get; set; } = string.Empty;
         public string SubmissionUrl { get; set; } = string.Empty;
+        public string RepoUrl { get; set; } = string.Empty;
+        public string DemoUrl { get; set; } = string.Empty;
+        public string SlideUrl { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
     }
 }

@@ -20,15 +20,18 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
         private readonly IUnitOfWork _unitOfWork;
         private readonly SEAL_Application.Interfaces.ICurrentUserService _currentUserService;
         private readonly SEAL_Application.Interfaces.IEventRoleChecker _eventRoleChecker;
+        private readonly SEAL_Application.Interfaces.IGitHostingService _gitHosting;
 
         public CreateSubmitResultCommandHandler(
             IUnitOfWork unitOfWork,
             SEAL_Application.Interfaces.ICurrentUserService currentUserService,
-            SEAL_Application.Interfaces.IEventRoleChecker eventRoleChecker)
+            SEAL_Application.Interfaces.IEventRoleChecker eventRoleChecker,
+            SEAL_Application.Interfaces.IGitHostingService gitHosting)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
+            _gitHosting = gitHosting;
         }
 
         public async Task<Result<CreateSubmitResultResponseModel>> Handle(CreateSubmitResultCommand request, CancellationToken cancellationToken)
@@ -149,12 +152,26 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
                 return BaseException.BadRequestDupplicationResponse("Nhóm đã nộp bài giải cho Hạng mục này ở Vòng thi này trước đó.");
             }
 
+            var repoUrl = string.IsNullOrWhiteSpace(request.Model.RepoUrl) ? request.Model.SubmissionUrl : request.Model.RepoUrl;
+            var inspect = await _gitHosting.InspectAsync(repoUrl, cancellationToken);
+            if (inspect.ShouldReject)
+            {
+                return BaseException.BadRequestInvaildInputResponse(inspect.Error ?? "Repo không hợp lệ.");
+            }
+
             var submitResult = new SubmitResult
             {
                 TeamId = request.Model.TeamId,
                 TrackId = request.Model.TrackId,
                 RoundId = round.Id,
-                SubmissionUrl = request.Model.SubmissionUrl,
+                RepoUrl = repoUrl,
+                DemoUrl = request.Model.DemoUrl,
+                SlideUrl = request.Model.SlideUrl,
+                SubmissionUrl = repoUrl,
+                RepoHost = inspect.Host,
+                RepoFullName = inspect.FullName,
+                RepoStars = inspect.Stars,
+                RepoLastPush = inspect.LastPush,
                 Description = request.Model.Description,
                 IsActive = true,
                 CreatedBy = currentUserId
@@ -170,6 +187,13 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
                 TrackId = submitResult.TrackId,
                 RoundId = submitResult.RoundId,
                 SubmissionUrl = submitResult.SubmissionUrl,
+                RepoUrl = submitResult.RepoUrl,
+                DemoUrl = submitResult.DemoUrl,
+                SlideUrl = submitResult.SlideUrl,
+                RepoHost = submitResult.RepoHost,
+                RepoFullName = submitResult.RepoFullName,
+                RepoStars = submitResult.RepoStars,
+                RepoLastPush = submitResult.RepoLastPush,
                 Description = submitResult.Description ?? string.Empty,
                 IsActive = submitResult.IsActive,
                 CreatedTime = submitResult.CreatedTime
