@@ -96,7 +96,7 @@ namespace SEAL_Application.Features.Users.Commands.UpdateStudentProfile
                 try
                 {
                     fptResponse = await httpClient.GetFromJsonAsync<FptStudentResponse>(
-                        $"{_fptMockBaseUrl}/api/Students/{request.StudentCode}",
+                        $"{_fptMockBaseUrl}/api/fpt-mock/students/{request.StudentCode}",
                         cancellationToken
                     );
                 }
