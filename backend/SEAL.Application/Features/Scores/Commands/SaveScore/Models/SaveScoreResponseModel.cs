@@ -1,3 +1,4 @@
+using SEAL_Domain.Entity.Enums;
 using System;
 using System.Collections.Generic;
 
@@ -12,6 +13,8 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore.Models
         public string? Comment { get; set; }
         public bool IsSubmitted { get; set; }
         public bool IsNew { get; set; }
+        public ScoreType ScoreType { get; set; } = ScoreType.Original;
+        public string? AppealId { get; set; }
         public List<SaveScoreDetailResultItem> Details { get; set; } = new();
         public DateTimeOffset CreatedTime { get; set; }
         public DateTimeOffset LastUpdatedTime { get; set; }

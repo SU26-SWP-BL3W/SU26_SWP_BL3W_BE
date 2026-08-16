@@ -27,6 +27,8 @@ namespace SEAL_Application.Features.Scores.Queries.GetTeamScoreBreakdown.Models
         public decimal TotalScore { get; set; }
         public string? Comment { get; set; }
         public bool IsSubmitted { get; set; }
+        public SEAL_Domain.Entity.Enums.ScoreType ScoreType { get; set; } = SEAL_Domain.Entity.Enums.ScoreType.Original;
+        public string? AppealId { get; set; }
         public List<CriterionScoreLine> Criteria { get; set; } = new();
     }
 

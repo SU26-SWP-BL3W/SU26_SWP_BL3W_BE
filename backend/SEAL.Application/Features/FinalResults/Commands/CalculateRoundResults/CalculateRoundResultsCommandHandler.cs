@@ -156,7 +156,16 @@ namespace SEAL_Application.Features.FinalResults.Commands.CalculateRoundResults
                             var subScores = scores.Where(sc => sc.SubmitResultId == sub.Id).ToList();
                             if (subScores.Count > 0)
                             {
-                                score = subScores.Average(sc => sc.TotalScore);
+                                // Nếu có phiếu chấm phúc khảo (AppealReview) thì ưu tiên lấy phiếu phúc khảo thay cho điểm gốc
+                                var effectiveScores = subScores
+                                    .GroupBy(sc => sc.EventRoleId)
+                                    .Select(g => g.OrderByDescending(sc => sc.ScoreType).First())
+                                    .ToList();
+
+                                if (effectiveScores.Count > 0)
+                                {
+                                    score = effectiveScores.Average(sc => sc.TotalScore);
+                                }
                             }
                         }
                         return new

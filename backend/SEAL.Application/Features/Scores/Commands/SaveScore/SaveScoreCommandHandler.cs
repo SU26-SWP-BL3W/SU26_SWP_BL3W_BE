@@ -121,11 +121,13 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
                 .FirstOrDefaultAsync(s => s.EventRoleId == m.EventRoleId && s.SubmitResultId == m.SubmitResultId, cancellationToken);
 
             bool isNew = score == null;
-            bool isAssignedAppeal = await _unitOfWork.GetRepository<Appeal>().AnyAsync(
-                a => a.SubmitResultId == m.SubmitResultId 
-                  && a.Status == SEAL_Domain.Entity.Enums.AppealStatus.Approved
-                  && a.AssignedJudgeId == m.EventRoleId, 
-                cancellationToken);
+            var approvedAppeal = await _unitOfWork.GetRepository<Appeal>().Entities
+                .FirstOrDefaultAsync(
+                    a => a.SubmitResultId == m.SubmitResultId 
+                      && a.Status == SEAL_Domain.Entity.Enums.AppealStatus.Approved
+                      && a.AssignedJudgeId == m.EventRoleId, 
+                    cancellationToken);
+            bool isAssignedAppeal = approvedAppeal != null;
 
             if (!isNew && score!.IsSubmitted && !isAssignedAppeal)
             {
@@ -221,6 +223,17 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
                     EventRoleId = m.EventRoleId,
                     SubmitResultId = m.SubmitResultId
                 };
+            }
+
+            if (isAssignedAppeal && approvedAppeal != null)
+            {
+                score!.ScoreType = ScoreType.AppealReview;
+                score.AppealId = approvedAppeal.Id;
+            }
+            else if (isNew)
+            {
+                score!.ScoreType = ScoreType.Original;
+                score.AppealId = null;
             }
 
             score!.Comment = m.Comment;
@@ -327,6 +340,8 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
                 Comment = score.Comment,
                 IsSubmitted = score.IsSubmitted,
                 IsNew = isNew,
+                ScoreType = score.ScoreType,
+                AppealId = score.AppealId,
                 Details = resultDetails,
                 CreatedTime = score.CreatedTime,
                 LastUpdatedTime = score.LastUpdatedTime

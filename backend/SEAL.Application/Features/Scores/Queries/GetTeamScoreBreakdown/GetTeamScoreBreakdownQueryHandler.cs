@@ -171,6 +171,8 @@ namespace SEAL_Application.Features.Scores.Queries.GetTeamScoreBreakdown
                         TotalScore = score.TotalScore,
                         Comment = score.Comment,
                         IsSubmitted = score.IsSubmitted,
+                        ScoreType = score.ScoreType,
+                        AppealId = score.AppealId,
                     };
 
                     foreach (var d in score.ScoreDetails)
