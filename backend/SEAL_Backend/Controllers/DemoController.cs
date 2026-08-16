@@ -17,6 +17,7 @@ namespace SEAL_Backend.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [AdminAuthorize]
+    [Microsoft.AspNetCore.Http.Tags("6. System & Utility")]
     public class DemoController : CustomControllerBase
     {
         private readonly IMediator _mediator;

@@ -15,6 +15,7 @@ namespace SEAL_Backend.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [Authorize]
+    [Microsoft.AspNetCore.Http.Tags("4. Teams & Submissions")]
     public class AppealsController : CustomControllerBase
     {
         private readonly IMediator _mediator;

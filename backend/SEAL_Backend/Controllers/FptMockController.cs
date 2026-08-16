@@ -13,6 +13,7 @@ namespace SEAL_Backend.Controllers
     /// </summary>
     [ApiController]
     [Route("api/fpt-mock")]
+    [Microsoft.AspNetCore.Http.Tags("6. System & Utility")]
     public class FptMockController : ControllerBase
     {
         private static readonly List<FptStudentRecord> _students = new()

@@ -15,6 +15,7 @@ namespace SEAL_Backend.Controllers
     [Route("api/[controller]")]
     [ApiController]
     [AdminOrCoordinatorAuthorize]
+    [Microsoft.AspNetCore.Http.Tags("2. Competitions & Structure")]
     public class PrizesController : CustomControllerBase
     {
         private readonly IMediator _mediator;

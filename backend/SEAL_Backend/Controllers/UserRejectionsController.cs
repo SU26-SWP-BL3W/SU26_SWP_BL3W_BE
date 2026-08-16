@@ -24,6 +24,7 @@ namespace SEAL_Backend.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [Microsoft.AspNetCore.Http.Tags("1. Auth & Users")]
     public class UserRejectionsController : CustomControllerBase
     {
         private readonly IMediator _mediator;

@@ -18,6 +18,7 @@ namespace SEAL_Backend.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
+    [Microsoft.AspNetCore.Http.Tags("6. System & Utility")]
     public class StorageController : CustomControllerBase
     {
         private readonly ICloudStorageService _cloudStorageService;

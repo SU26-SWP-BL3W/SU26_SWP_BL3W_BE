@@ -30,6 +30,7 @@ namespace SEAL_Backend.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Microsoft.AspNetCore.Http.Tags("4. Teams & Submissions")]
     public class SubmitResultsController : CustomControllerBase
     {
         private readonly IMediator _mediator;

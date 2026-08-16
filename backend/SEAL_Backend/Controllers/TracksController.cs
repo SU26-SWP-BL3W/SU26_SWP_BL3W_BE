@@ -24,6 +24,7 @@ namespace SEAL_Backend.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Microsoft.AspNetCore.Http.Tags("2. Competitions & Structure")]
     public class TracksController : CustomControllerBase
     {
         private readonly IMediator _mediator;

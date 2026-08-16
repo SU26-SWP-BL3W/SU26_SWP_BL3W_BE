@@ -23,6 +23,7 @@ namespace SEAL_Backend.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Microsoft.AspNetCore.Http.Tags("6. System & Utility")]
     public class SchoolsController : CustomControllerBase
     {
         private readonly IMediator _mediator;

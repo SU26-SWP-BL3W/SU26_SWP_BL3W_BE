@@ -17,6 +17,7 @@ namespace SEAL_Backend.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Microsoft.AspNetCore.Http.Tags("3. Personnel & Roles")]
     public class EventCoordinatorsController : CustomControllerBase
     {
         private readonly IMediator _mediator;

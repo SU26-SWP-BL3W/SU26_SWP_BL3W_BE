@@ -22,6 +22,7 @@ namespace SEAL_Backend.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
+    [Microsoft.AspNetCore.Http.Tags("5. Scoring & Evaluation")]
     public class ScoreDetailsController : CustomControllerBase
     {
         private readonly IMediator _mediator;

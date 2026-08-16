@@ -24,6 +24,7 @@ namespace SEAL_Backend.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Microsoft.AspNetCore.Http.Tags("1. Auth & Users")]
     public class AuthController : CustomControllerBase
     {
         private readonly IMediator _mediator;

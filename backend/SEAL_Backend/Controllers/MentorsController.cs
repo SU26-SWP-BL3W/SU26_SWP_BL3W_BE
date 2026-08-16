@@ -13,6 +13,7 @@ namespace SEAL_Backend.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Microsoft.AspNetCore.Http.Tags("3. Personnel & Roles")]
     public class MentorsController : CustomControllerBase
     {
         private readonly IMediator _mediator;
