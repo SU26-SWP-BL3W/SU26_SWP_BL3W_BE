@@ -16,12 +16,18 @@ namespace SEAL_Application.Features.Appeals.Commands.RespondAppeal
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
+        private readonly INotificationService _notificationService;
 
-        public RespondAppealCommandHandler(IUnitOfWork unitOfWork, ICurrentUserService currentUserService, IEventRoleChecker eventRoleChecker)
+        public RespondAppealCommandHandler(
+            IUnitOfWork unitOfWork,
+            ICurrentUserService currentUserService,
+            IEventRoleChecker eventRoleChecker,
+            INotificationService notificationService)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
+            _notificationService = notificationService;
         }
 
         public async Task<Result<bool>> Handle(RespondAppealCommand request, CancellationToken cancellationToken)
@@ -80,6 +86,36 @@ namespace SEAL_Application.Features.Appeals.Commands.RespondAppeal
 
             await _unitOfWork.GetRepository<Appeal>().UpdateAsync(appeal);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // Bắn thông báo In-App cho người gửi đơn
+            if (!string.IsNullOrEmpty(appeal.CreatedBy))
+            {
+                var statusText = appeal.Status == AppealStatus.Approved ? "CHẤP THUẬN" : "TỪ CHỐI";
+                var notifType = appeal.Status == AppealStatus.Approved ? "success" : "warning";
+                await _notificationService.NotifyAsync(
+                    appeal.CreatedBy,
+                    "Phản hồi đơn phúc khảo",
+                    $"Đơn phúc khảo bài thi của bạn đã được {statusText}. Phản hồi từ BTC: {appeal.Response}",
+                    notifType,
+                    "/appeals",
+                    cancellationToken);
+            }
+
+            // Nếu đơn được chấp thuận và có chỉ định Giám khảo chấm lại, bắn thông báo cho Giám khảo
+            if (appeal.Status == AppealStatus.Approved && !string.IsNullOrEmpty(appeal.AssignedJudgeId))
+            {
+                var judgeRole = await _unitOfWork.GetRepository<EventRole>().GetByIdAsync(appeal.AssignedJudgeId);
+                if (judgeRole != null && !string.IsNullOrEmpty(judgeRole.UserId))
+                {
+                    await _notificationService.NotifyAsync(
+                        judgeRole.UserId,
+                        "Phân công chấm phúc khảo",
+                        $"Bạn được phân công chấm lại một bài thi đã được BTC duyệt phúc khảo.",
+                        "info",
+                        $"/judge/scoring/{appeal.SubmitResultId}",
+                        cancellationToken);
+                }
+            }
 
             return true;
         }

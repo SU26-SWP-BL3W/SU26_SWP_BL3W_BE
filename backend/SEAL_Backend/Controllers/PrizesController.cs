@@ -31,6 +31,15 @@ namespace SEAL_Backend.Controllers
             return OkResponse(result);
         }
 
+        [HttpGet("~/api/Events/{eventId}/Prizes/public")]
+        [HttpGet("event/{eventId}/public")]
+        [Microsoft.AspNetCore.Authorization.AllowAnonymous]
+        public async Task<IActionResult> GetPublicByEventId(string eventId)
+        {
+            var result = await _mediator.Send(new GetPrizesByEventIdQuery { EventId = eventId });
+            return OkResponse(result);
+        }
+
         [HttpPost("~/api/Events/{eventId}/Prizes")]
         public async Task<IActionResult> Create(string eventId, [FromBody] CreatePrizeRequestModel payload)
         {

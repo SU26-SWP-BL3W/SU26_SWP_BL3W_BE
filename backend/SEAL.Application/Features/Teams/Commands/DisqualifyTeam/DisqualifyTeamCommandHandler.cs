@@ -22,19 +22,22 @@ namespace SEAL_Application.Features.Teams.Commands.DisqualifyTeam
         private readonly IEventRoleChecker _eventRoleChecker;
         private readonly IEmailService _emailService;
         private readonly IAuditLogService _auditLogService;
+        private readonly INotificationService _notificationService;
 
         public DisqualifyTeamCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEventRoleChecker eventRoleChecker,
             IEmailService emailService,
-            IAuditLogService auditLogService)
+            IAuditLogService auditLogService,
+            INotificationService notificationService)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
             _emailService = emailService;
             _auditLogService = auditLogService;
+            _notificationService = notificationService;
         }
 
         public async Task<Result<bool>> Handle(DisqualifyTeamCommand request, CancellationToken cancellationToken)
@@ -92,6 +95,24 @@ namespace SEAL_Application.Features.Teams.Commands.DisqualifyTeam
                 cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // Bắn thông báo In-App cho toàn bộ thành viên đội
+            var memberUserIds = await _unitOfWork.GetRepository<EventRole>().Entities
+                .Where(er => er.TeamId == team.Id)
+                .Select(er => er.UserId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            if (memberUserIds.Count > 0)
+            {
+                await _notificationService.NotifyManyAsync(
+                    memberUserIds,
+                    "Đội thi bị loại khỏi cuộc thi",
+                    $"Đội '{team.Name}' đã bị loại do vi phạm quy chế: {request.Reason}",
+                    "danger",
+                    "/my-team",
+                    cancellationToken);
+            }
 
             var leaders = await _unitOfWork.GetRepository<EventRole>().Entities
                 .Where(er => er.TeamId == team.Id && er.RoleName == EventRoleType.TeamLeader)

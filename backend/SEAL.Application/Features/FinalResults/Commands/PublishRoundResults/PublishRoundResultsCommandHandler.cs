@@ -23,17 +23,20 @@ namespace SEAL_Application.Features.FinalResults.Commands.PublishRoundResults
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
         private readonly IAuditLogService _auditLogService;
+        private readonly INotificationService _notificationService;
 
         public PublishRoundResultsCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEventRoleChecker eventRoleChecker,
-            IAuditLogService auditLogService)
+            IAuditLogService auditLogService,
+            INotificationService notificationService)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
             _auditLogService = auditLogService;
+            _notificationService = notificationService;
         }
 
         public async Task<Result<bool>> Handle(PublishRoundResultsCommand request, CancellationToken cancellationToken)
@@ -87,6 +90,28 @@ namespace SEAL_Application.Features.FinalResults.Commands.PublishRoundResults
                 new { count = results.Count },
                 cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // 5. Bắn thông báo In-App cho toàn bộ thành viên các đội tham gia vòng thi
+            var teamIds = results.Select(r => r.TeamId).Distinct().ToList();
+            if (teamIds.Count > 0)
+            {
+                var participantUserIds = await _unitOfWork.GetRepository<EventRole>().Entities
+                    .Where(er => er.TeamId != null && teamIds.Contains(er.TeamId))
+                    .Select(er => er.UserId)
+                    .Distinct()
+                    .ToListAsync(cancellationToken);
+
+                if (participantUserIds.Count > 0)
+                {
+                    await _notificationService.NotifyManyAsync(
+                        participantUserIds,
+                        "Kết quả vòng thi đã được công bố",
+                        $"Kết quả thi đấu chính thức của vòng '{round.RoundName}' đã được công bố. Bạn có thể kiểm tra thứ hạng trên Bảng xếp hạng.",
+                        "result",
+                        $"/leaderboard?eventId={round.EventId}",
+                        cancellationToken);
+                }
+            }
 
             return true;
         }
