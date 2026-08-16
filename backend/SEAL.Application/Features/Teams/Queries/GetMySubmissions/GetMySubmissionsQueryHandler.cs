@@ -45,16 +45,21 @@ namespace SEAL_Application.Features.Teams.Queries.GetMySubmissions
             // 2. Lấy tất cả SubmitResult thuộc về các TeamId đó
             var query = _unitOfWork.GetRepository<SubmitResult>().GetQueryable()
                 .AsNoTracking()
+                .Include(sr => sr.Team)
                 .Where(sr => teamIds.Contains(sr.TeamId));
 
-            // 3. Phân trang và trả về kết quả
+            // 3. Phân trang và trả về kết quả — đủ 3 URL để FE xem lại bài đã nộp.
             var pagedResults = await query
                 .ToPagedResultAsync(request, sr => new SubmitResultListItemModel
                 {
                     Id = sr.Id,
                     TeamId = sr.TeamId,
                     TrackId = sr.TrackId,
+                    TeamName = sr.Team != null ? sr.Team.Name : null,
                     SubmissionUrl = sr.SubmissionUrl,
+                    RepoUrl = sr.RepoUrl,
+                    DemoUrl = sr.DemoUrl,
+                    SlideUrl = sr.SlideUrl,
                     IsActive = sr.IsActive,
                     CreatedTime = sr.CreatedTime
                 }, cancellationToken);

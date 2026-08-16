@@ -117,11 +117,11 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoAppealEvent
             await _unitOfWork.GetRepository<Track>().AddAsync(track3);
 
             // Teams
-            var team1 = new Team { Event = event3, Name = "Team Phúc Khảo 1", Status = TeamStatus.Registered };
+            var team1 = new Team { Event = event3, Name = "Team Phúc Khảo 1", Status = TeamStatus.Registered, TrackId = track3.Id };
             await _unitOfWork.GetRepository<Team>().AddAsync(team1);
             await AddEventRoleAsync(student1.Id, event3.Id, team1.Id, null, EventRoleType.TeamLeader, event3.EndDate);
 
-            var team2 = new Team { Event = event3, Name = "Team Phúc Khảo 2", Status = TeamStatus.Registered };
+            var team2 = new Team { Event = event3, Name = "Team Phúc Khảo 2", Status = TeamStatus.Registered, TrackId = track3.Id };
             await _unitOfWork.GetRepository<Team>().AddAsync(team2);
             await AddEventRoleAsync(student3.Id, event3.Id, team2.Id, null, EventRoleType.TeamLeader, event3.EndDate);
 
@@ -135,7 +135,9 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoAppealEvent
             {
                 TeamId = team1.Id,
                 TrackId = track3.Id,
+                RoundId = round3.Id,
                 SubmissionUrl = "https://github.com/team1",
+                RepoUrl = "https://github.com/team1",
                 Description = "Bài nộp team 1",
                 IsActive = true,
                 CreatedBy = student1.Id,
@@ -147,7 +149,9 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoAppealEvent
             {
                 TeamId = team2.Id,
                 TrackId = track3.Id,
+                RoundId = round3.Id,
                 SubmissionUrl = "https://github.com/team2",
+                RepoUrl = "https://github.com/team2",
                 Description = "Bài nộp team 2",
                 IsActive = true,
                 CreatedBy = student3.Id,
