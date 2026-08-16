@@ -82,9 +82,9 @@ namespace SEAL_Backend.Controllers
         [Authorize]
         [ProducesResponseType(typeof(BaseResponse<MyTeamResponseModel>), 200)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> GetMyTeam([FromQuery] string eventId)
+        public async Task<IActionResult> GetMyTeam([FromQuery] string? eventId)
         {
-            var result = await _mediator.Send(new GetMyTeamQuery { EventId = eventId });
+            var result = await _mediator.Send(new GetMyTeamQuery { EventId = eventId ?? string.Empty });
             if (result == null) return NotFound();
             return OkResponse(result);
         }

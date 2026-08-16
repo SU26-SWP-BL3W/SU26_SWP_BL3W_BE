@@ -31,5 +31,12 @@ namespace SEAL_Application.Features.Teams.Queries.GetMyTeam.Models
         public string? StudentCode { get; set; }
         public string RoleName { get; set; } = string.Empty;
         public bool IsApproved { get; set; }
+
+        /// <summary>
+        /// Thành viên đã nộp hồ sơ thí sinh (IsStudent + SchoolId) — cùng điều kiện mà
+        /// ConfirmTeamRegistration dùng để chặn chốt đăng ký. FE dựa vào cờ này cho checklist,
+        /// không dùng IsApproved (duyệt tài khoản) vì hai việc khác nhau.
+        /// </summary>
+        public bool HasStudentProfile { get; set; }
     }
 }
