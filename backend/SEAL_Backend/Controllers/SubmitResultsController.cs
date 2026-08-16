@@ -114,5 +114,59 @@ namespace SEAL_Backend.Controllers
             var result = await _mediator.Send(query);
             return OkResponse(result);
         }
+
+        /// <summary>
+        /// Cố vấn chuyên môn (Mentor) hoặc BTC gửi nhận xét/lời khuyên cho bài nộp của đội thi.
+        /// Tự động gửi thông báo In-App cho toàn bộ thành viên đội.
+        /// </summary>
+        /// <param name="id">ID bài nộp.</param>
+        /// <param name="model">Nội dung nhận xét.</param>
+        /// <returns>ID nhận xét vừa tạo.</returns>
+        [HttpPost("{id}/feedback")]
+        [Authorize]
+        [ProducesResponseType(typeof(BaseResponse<string>), 200)]
+        public async Task<IActionResult> CreateFeedback(string id, [FromBody] SEAL_Application.Features.SubmitResults.Commands.CreateMentorFeedback.CreateMentorFeedbackRequestModel model)
+        {
+            var result = await _mediator.Send(new SEAL_Application.Features.SubmitResults.Commands.CreateMentorFeedback.CreateMentorFeedbackCommand
+            {
+                SubmitResultId = id,
+                Model = model
+            });
+            return OkResponse(result);
+        }
+
+        /// <summary>
+        /// Lấy danh sách nhận xét của các Cố vấn (Mentor) đã gửi cho bài nộp.
+        /// </summary>
+        /// <param name="id">ID bài nộp.</param>
+        /// <returns>Danh sách nhận xét kèm tên Cố vấn và thời gian.</returns>
+        [HttpGet("{id}/feedbacks")]
+        [Authorize]
+        [ProducesResponseType(typeof(BaseResponse<List<SEAL_Application.Features.SubmitResults.Queries.GetMentorFeedbacks.Models.MentorFeedbackModel>>), 200)]
+        public async Task<IActionResult> GetFeedbacks(string id)
+        {
+            var result = await _mediator.Send(new SEAL_Application.Features.SubmitResults.Queries.GetMentorFeedbacks.GetMentorFeedbacksQuery
+            {
+                SubmitResultId = id
+            });
+            return OkResponse(result);
+        }
+
+        /// <summary>
+        /// Xóa nhận xét của Cố vấn (chỉ người viết hoặc Admin).
+        /// </summary>
+        /// <param name="feedbackId">ID của nhận xét.</param>
+        /// <returns>Kết quả xóa.</returns>
+        [HttpDelete("feedback/{feedbackId}")]
+        [Authorize]
+        [ProducesResponseType(typeof(BaseResponse<bool>), 200)]
+        public async Task<IActionResult> DeleteFeedback(string feedbackId)
+        {
+            var result = await _mediator.Send(new SEAL_Application.Features.SubmitResults.Commands.DeleteMentorFeedback.DeleteMentorFeedbackCommand
+            {
+                FeedbackId = feedbackId
+            });
+            return OkResponse(result);
+        }
     }
 }
