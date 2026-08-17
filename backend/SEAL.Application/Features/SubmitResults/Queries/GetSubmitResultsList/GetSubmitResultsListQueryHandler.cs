@@ -135,6 +135,7 @@ namespace SEAL_Application.Features.SubmitResults.Queries.GetSubmitResultsList
                     TeamId = sr.TeamId,
                     TrackId = sr.TrackId ?? string.Empty,
                     TeamName = sr.Team != null ? sr.Team.Name : null,
+                    IsTeamDisqualified = sr.Team != null && sr.Team.Status == SEAL_Domain.Entity.Enums.TeamStatus.Disqualified,
                     SubmissionUrl = sr.SubmissionUrl,
                     RepoUrl = sr.RepoUrl,
                     DemoUrl = sr.DemoUrl,

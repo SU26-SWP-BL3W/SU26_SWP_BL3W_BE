@@ -14,13 +14,16 @@ namespace SEAL_Application.Features.Teams.Commands.CancelTeamInvitation
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
+        private readonly INotificationService _notifications;
 
         public CancelTeamInvitationCommandHandler(
             IUnitOfWork unitOfWork,
-            ICurrentUserService currentUserService)
+            ICurrentUserService currentUserService,
+            INotificationService notifications)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
+            _notifications = notifications;
         }
 
         public async Task<Result<bool>> Handle(CancelTeamInvitationCommand request, CancellationToken cancellationToken)
@@ -76,6 +79,24 @@ namespace SEAL_Application.Features.Teams.Commands.CancelTeamInvitation
             // 5. Cập nhật trạng thái sang Cancelled
             invitation.Status = TeamInvitationStatus.Cancelled;
             _unitOfWork.GetRepository<TeamInvitation>().Update(invitation);
+
+            // Báo cho người được mời biết lời mời đã bị hủy — trước giờ họ chỉ phát hiện khi
+            // lời mời tự biến mất khỏi danh sách, không có thông báo nào cả.
+            if (!string.IsNullOrEmpty(invitation.InvitedUserId))
+            {
+                var noticeText = invitation.Status == TeamInvitationStatus.Cancelled
+                    && invitation.Notes == "Yêu cầu chuyển quyền Trưởng nhóm"
+                    ? $"Yêu cầu chuyển quyền Trưởng nhóm {team.Name} đã bị hủy."
+                    : $"Lời mời gia nhập đội {team.Name} đã bị hủy.";
+                await _notifications.NotifyAsync(
+                    invitation.InvitedUserId,
+                    "Lời mời đã bị hủy",
+                    noticeText,
+                    "warning",
+                    "/my-invitations",
+                    cancellationToken);
+            }
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return Result<bool>.Success(true);

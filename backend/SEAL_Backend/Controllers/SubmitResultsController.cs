@@ -113,5 +113,33 @@ namespace SEAL_Backend.Controllers
             var result = await _mediator.Send(query);
             return OkResponse(result);
         }
+
+        /// <summary>Nhận xét của Cố vấn cho 1 bài nộp.</summary>
+        [HttpGet("{id}/mentor-feedback")]
+        [EventRoleAuthorize(EventRoleType.EventCoordinator, EventRoleType.Judge, EventRoleType.Mentor, EventRoleType.TeamLeader, EventRoleType.TeamMember)]
+        public async Task<IActionResult> GetMentorFeedbacks(string id)
+        {
+            var result = await _mediator.Send(new SEAL_Application.Features.SubmitResults.Queries.GetMentorFeedbacks.GetMentorFeedbacksQuery { SubmitResultId = id });
+            return OkResponse(result);
+        }
+
+        /// <summary>Cố vấn thêm nhận xét cho 1 bài nộp.</summary>
+        [HttpPost("{id}/mentor-feedback")]
+        [EventRoleAuthorize(EventRoleType.EventCoordinator, EventRoleType.Mentor)]
+        public async Task<IActionResult> CreateMentorFeedback(string id, [FromBody] SEAL_Application.Features.SubmitResults.Commands.CreateMentorFeedback.CreateMentorFeedbackCommand command)
+        {
+            command.SubmitResultId = id;
+            var result = await _mediator.Send(command);
+            return OkResponse(result);
+        }
+
+        /// <summary>Xóa 1 nhận xét của Cố vấn (chỉ chính Cố vấn đó hoặc Admin).</summary>
+        [HttpDelete("mentor-feedback/{feedbackId}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteMentorFeedback(string feedbackId)
+        {
+            var result = await _mediator.Send(new SEAL_Application.Features.SubmitResults.Commands.DeleteMentorFeedback.DeleteMentorFeedbackCommand { FeedbackId = feedbackId });
+            return OkResponse(result);
+        }
     }
 }

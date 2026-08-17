@@ -86,6 +86,17 @@ namespace SEAL_Application.Features.Teams.Commands.DisqualifyTeam
                 await _unitOfWork.GetRepository<FinalResult>().DeleteRangeAsync(draftResults);
             }
 
+            // Vô hiệu (không xóa) bài nộp của đội bị loại — giữ lại để đối chiếu/kiểm tra sau này,
+            // nhưng không còn tính là bài nộp đang hoạt động (đúng ý nghĩa cờ IsActive đã có sẵn).
+            var submissions = await _unitOfWork.GetRepository<SubmitResult>().Entities
+                .Where(sr => sr.TeamId == team.Id && sr.IsActive)
+                .ToListAsync(cancellationToken);
+            foreach (var submission in submissions)
+            {
+                submission.IsActive = false;
+                await _unitOfWork.GetRepository<SubmitResult>().UpdateAsync(submission);
+            }
+
             await _auditLogService.AppendAsync(
                 AuditActions.DisqualifyTeam,
                 AuditEntityTypes.Team,

@@ -10,6 +10,7 @@ namespace SEAL_Application.Features.SubmitResults.Queries.GetSubmitResultsList.M
         public string TeamId { get; set; } = string.Empty;
         public string TrackId { get; set; } = string.Empty;
         public string? TeamName { get; set; }
+        public bool IsTeamDisqualified { get; set; }
         public string? DisplayCode { get; set; }
         public string SubmissionUrl { get; set; } = string.Empty;
         public string? RepoUrl { get; set; }
