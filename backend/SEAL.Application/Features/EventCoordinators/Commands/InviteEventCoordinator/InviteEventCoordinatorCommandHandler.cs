@@ -184,6 +184,9 @@ namespace SEAL_Application.Features.EventCoordinators.Commands.InviteEventCoordi
                 "staff_invite",
                 $"/invitations/{invitation.Id}",
                 cancellationToken);
+            // NotifyAsync chỉ Add vào tracker, KHÔNG tự SaveChanges (unit-of-work dùng chung) — thiếu dòng
+            // này thì notification bị bỏ quên, không bao giờ ghi xuống DB dù request vẫn trả 200 bình thường.
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return new InviteEventCoordinatorResponseModel
             {
