@@ -34,18 +34,17 @@ namespace SEAL_Application.Features.Teams.Queries.GetMyTeam
                 return new BaseException.UnauthorizedException("Không thể xác thực người dùng. Vui lòng đăng nhập.");
             }
 
-            if (string.IsNullOrEmpty(request.EventId))
+            // EventId trống: lấy đội đầu tiên của user (màn /my-team không chọn sự kiện).
+            var userRoleQuery = _unitOfWork.GetRepository<EventRole>().Entities
+                .Where(er => er.UserId == currentUserId
+                          && er.TeamId != null
+                          && (er.RoleName == EventRoleType.TeamLeader || er.RoleName == EventRoleType.TeamMember));
+            if (!string.IsNullOrEmpty(request.EventId))
             {
-                return BaseException.BadRequestResponse("ID sự kiện (EventId) là bắt buộc.");
+                userRoleQuery = userRoleQuery.Where(er => er.EventId == request.EventId);
             }
 
-            // 2. Tìm EventRole của người dùng hiện tại thuộc đội trong sự kiện này
-            var userRole = await _unitOfWork.GetRepository<EventRole>().Entities
-                .FirstOrDefaultAsync(er => er.UserId == currentUserId
-                                       && er.EventId == request.EventId
-                                       && er.TeamId != null
-                                       && (er.RoleName == EventRoleType.TeamLeader || er.RoleName == EventRoleType.TeamMember),
-                                     cancellationToken);
+            var userRole = await userRoleQuery.FirstOrDefaultAsync(cancellationToken);
 
             if (userRole == null)
             {
@@ -73,6 +72,7 @@ namespace SEAL_Application.Features.Teams.Queries.GetMyTeam
                 Status = team.Status.ToString(),
                 IsActive = team.IsActive,
                 EventId = team.EventId,
+                TrackId = team.TrackId,
                 EventName = team.Event?.EventName ?? string.Empty,
                 CreatedTime = team.CreatedTime,
                 LastRejectReason = team.LastRejectReason,
@@ -85,7 +85,8 @@ namespace SEAL_Application.Features.Teams.Queries.GetMyTeam
                         Email = er.User?.Email ?? string.Empty,
                         StudentCode = er.User?.StudentCode,
                         RoleName = er.RoleName.ToString(),
-                        IsApproved = er.User?.IsApproved ?? false
+                        IsApproved = er.User?.IsApproved ?? false,
+                        HasStudentProfile = (er.User?.IsStudent ?? false) && er.User?.SchoolId != null
                     })
                     .ToList()
             };

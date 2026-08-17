@@ -9,6 +9,8 @@ namespace SEAL_Application.Features.Teams.Commands.UpdateTeam.Models
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        /// <summary>null = giữ nguyên. Chỉ đổi được khi đội còn Forming và chưa có bài nộp.</summary>
+        public string? TrackId { get; set; }
 
         /// <summary>null = giữ nguyên. Client quên gửi mà mặc định false thì đội bị TẮT NGẦM —
         /// vì vậy phải nullable. Chỉ Event Coordinator/Admin được thay đổi.</summary>

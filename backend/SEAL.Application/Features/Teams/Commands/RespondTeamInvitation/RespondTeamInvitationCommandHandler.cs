@@ -23,15 +23,18 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
+        private readonly INotificationService _notifications;
 
         public RespondTeamInvitationCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
-            IEventRoleChecker eventRoleChecker)
+            IEventRoleChecker eventRoleChecker,
+            INotificationService notifications)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
+            _notifications = notifications;
         }
 
         public async Task<Result<RespondTeamInvitationResponseModel>> Handle(RespondTeamInvitationCommand request, CancellationToken cancellationToken)
@@ -80,9 +83,24 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
                 invitation.Status = TeamInvitationStatus.Declined;
                 invitation.RespondedAt = now;
                 await _unitOfWork.GetRepository<TeamInvitation>().UpdateAsync(invitation);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-                // TODO: Thông báo cho TeamLeader rằng lời mời bị từ chối
+                var leaderId = await _unitOfWork.GetRepository<EventRole>().Entities
+                    .Where(er => er.TeamId == invitation.TeamId && er.RoleName == EventRoleType.TeamLeader)
+                    .Select(er => er.UserId)
+                    .FirstOrDefaultAsync(cancellationToken);
+                var teamName = (await _unitOfWork.GetRepository<Team>().GetByIdAsync(invitation.TeamId))?.Name ?? "đội";
+                if (!string.IsNullOrEmpty(leaderId))
+                {
+                    await _notifications.NotifyAsync(
+                        leaderId,
+                        "Lời mời bị từ chối",
+                        $"Một thành viên đã từ chối lời mời vào đội {teamName}.",
+                        "warning",
+                        "/my-team",
+                        cancellationToken);
+                }
+
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return new RespondTeamInvitationResponseModel
                 {
@@ -253,7 +271,23 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
                 }
             }
 
-            // TODO: Thông báo cho TeamLeader rằng thành viên đã tham gia
+            // Thông báo trưởng nhóm: thành viên đã tham gia
+            var acceptLeaderId = await _unitOfWork.GetRepository<EventRole>().Entities
+                .Where(er => er.TeamId == invitation.TeamId && er.RoleName == EventRoleType.TeamLeader)
+                .Select(er => er.UserId)
+                .FirstOrDefaultAsync(cancellationToken);
+            var acceptTeam = await _unitOfWork.GetRepository<Team>().GetByIdAsync(invitation.TeamId);
+            if (!string.IsNullOrEmpty(acceptLeaderId))
+            {
+                await _notifications.NotifyAsync(
+                    acceptLeaderId,
+                    "Thành viên đã tham gia",
+                    $"Một thành viên đã đồng ý vào đội {acceptTeam?.Name ?? ""}.",
+                    "success",
+                    "/my-team",
+                    cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
 
             return new RespondTeamInvitationResponseModel
             {

@@ -11,6 +11,7 @@ namespace SEAL_Application.Features.Teams.Queries.GetTeamById.Models
         public string Status { get; set; } = string.Empty;
         public bool IsActive { get; set; }
         public string EventId { get; set; } = string.Empty;
+        public string? TrackId { get; set; }
         public DateTimeOffset CreatedTime { get; set; }
 
         /// <summary>

@@ -18,15 +18,18 @@ namespace SEAL_Application.Features.SubmitResults.Commands.UpdateSubmitResult
         private readonly IUnitOfWork _unitOfWork;
         private readonly SEAL_Application.Interfaces.ICurrentUserService _currentUserService;
         private readonly SEAL_Application.Interfaces.IEventRoleChecker _eventRoleChecker;
+        private readonly SEAL_Application.Interfaces.IGitHostingService _gitHosting;
 
         public UpdateSubmitResultCommandHandler(
             IUnitOfWork unitOfWork,
             SEAL_Application.Interfaces.ICurrentUserService currentUserService,
-            SEAL_Application.Interfaces.IEventRoleChecker eventRoleChecker)
+            SEAL_Application.Interfaces.IEventRoleChecker eventRoleChecker,
+            SEAL_Application.Interfaces.IGitHostingService gitHosting)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
+            _gitHosting = gitHosting;
         }
 
         public async Task<Result<UpdateSubmitResultResponseModel>> Handle(UpdateSubmitResultCommand request, CancellationToken cancellationToken)
@@ -45,6 +48,11 @@ namespace SEAL_Application.Features.SubmitResults.Commands.UpdateSubmitResult
             if (team == null)
             {
                 return BaseException.BadRequestInvaildInputResponse("Nhóm nộp bài không tồn tại.");
+            }
+
+            if (team.Status == SEAL_Domain.Entity.Enums.TeamStatus.Disqualified)
+            {
+                return BaseException.BadRequestInvaildInputResponse("Đội đã bị loại nên không thể sửa bài nộp.");
             }
 
             // Kiểm tra Ownership / Quyền hạn
@@ -110,9 +118,35 @@ namespace SEAL_Application.Features.SubmitResults.Commands.UpdateSubmitResult
                     "Chỉ Event Coordinator được thay đổi trạng thái hiệu lực (IsActive) của bài nộp.");
             }
 
-            if (!string.IsNullOrWhiteSpace(request.Model.SubmissionUrl))
+            if (!string.IsNullOrWhiteSpace(request.Model.RepoUrl))
+            {
+                submitResult.RepoUrl = request.Model.RepoUrl;
+                submitResult.SubmissionUrl = request.Model.RepoUrl;
+            }
+            else if (!string.IsNullOrWhiteSpace(request.Model.SubmissionUrl))
             {
                 submitResult.SubmissionUrl = request.Model.SubmissionUrl;
+                submitResult.RepoUrl = request.Model.SubmissionUrl;
+            }
+            if (!string.IsNullOrWhiteSpace(request.Model.DemoUrl))
+            {
+                submitResult.DemoUrl = request.Model.DemoUrl;
+            }
+            if (!string.IsNullOrWhiteSpace(request.Model.SlideUrl))
+            {
+                submitResult.SlideUrl = request.Model.SlideUrl;
+            }
+            if (!string.IsNullOrWhiteSpace(submitResult.RepoUrl ?? submitResult.SubmissionUrl))
+            {
+                var inspect = await _gitHosting.InspectAsync(submitResult.RepoUrl ?? submitResult.SubmissionUrl, cancellationToken);
+                if (inspect.ShouldReject)
+                {
+                    return BaseException.BadRequestInvaildInputResponse(inspect.Error ?? "Repo không hợp lệ.");
+                }
+                submitResult.RepoHost = inspect.Host;
+                submitResult.RepoFullName = inspect.FullName;
+                submitResult.RepoStars = inspect.Stars;
+                submitResult.RepoLastPush = inspect.LastPush;
             }
             if (request.Model.Description != null) // null = giữ mô tả cũ; "" = chủ đích xóa mô tả
             {
@@ -134,6 +168,9 @@ namespace SEAL_Application.Features.SubmitResults.Commands.UpdateSubmitResult
                 TeamId = submitResult.TeamId,
                 TrackId = submitResult.TrackId,
                 SubmissionUrl = submitResult.SubmissionUrl,
+                RepoUrl = submitResult.RepoUrl,
+                DemoUrl = submitResult.DemoUrl,
+                SlideUrl = submitResult.SlideUrl,
                 Description = submitResult.Description,
                 IsActive = submitResult.IsActive,
                 LastUpdatedTime = submitResult.LastUpdatedTime

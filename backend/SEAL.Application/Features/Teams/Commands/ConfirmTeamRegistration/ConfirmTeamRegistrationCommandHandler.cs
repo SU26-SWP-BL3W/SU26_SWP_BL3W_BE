@@ -24,15 +24,18 @@ namespace SEAL_Application.Features.Teams.Commands.ConfirmTeamRegistration
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
+        private readonly INotificationService _notifications;
 
         public ConfirmTeamRegistrationCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
-            IEventRoleChecker eventRoleChecker)
+            IEventRoleChecker eventRoleChecker,
+            INotificationService notifications)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
+            _notifications = notifications;
         }
 
         public async Task<Result<ConfirmTeamRegistrationResponseModel>> Handle(ConfirmTeamRegistrationCommand request, CancellationToken cancellationToken)
@@ -55,6 +58,11 @@ namespace SEAL_Application.Features.Teams.Commands.ConfirmTeamRegistration
             if (team.Status != TeamStatus.Forming)
             {
                 return BaseException.BadRequestInvaildInputResponse($"Đội không ở trạng thái cho phép đăng ký (hiện tại: {team.Status}).");
+            }
+
+            if (string.IsNullOrEmpty(team.TrackId))
+            {
+                return BaseException.BadRequestInvaildInputResponse("Đội chưa đăng ký hạng mục thi nên không thể chốt danh sách.");
             }
 
             // 3. Quyền: caller là TeamLeader của đội (hoặc Coordinator/Admin)
@@ -127,9 +135,29 @@ namespace SEAL_Application.Features.Teams.Commands.ConfirmTeamRegistration
             team.LastRejectReason = null;
             team.LastUpdatedTime = CoreHelper.SystemTimeNow;
             await _unitOfWork.GetRepository<Team>().UpdateAsync(team);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // TODO: Thông báo cho tất cả thành viên + EventCoordinator
+            await _notifications.NotifyManyAsync(
+                memberUserIds,
+                "Đội đã chốt đăng ký",
+                $"Đội {team.Name} đã gửi đăng ký, chờ Ban tổ chức duyệt.",
+                "info",
+                "/my-team",
+                cancellationToken);
+
+            var coordinatorIds = await _unitOfWork.GetRepository<EventRole>().Entities
+                .Where(er => er.EventId == team.EventId && er.RoleName == EventRoleType.EventCoordinator)
+                .Select(er => er.UserId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+            await _notifications.NotifyManyAsync(
+                coordinatorIds,
+                "Đội chờ duyệt",
+                $"Đội {team.Name} vừa chốt danh sách, cần duyệt đăng ký.",
+                "warning",
+                "/coordinator/teams",
+                cancellationToken);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return new ConfirmTeamRegistrationResponseModel
             {

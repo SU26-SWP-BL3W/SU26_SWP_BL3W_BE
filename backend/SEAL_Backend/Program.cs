@@ -38,7 +38,14 @@ builder.Services.AddScoped<IEventMetadataResolver, SEAL_Application.Services.Eve
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<IEventRoleChecker, SEAL_Application.Services.EventRoleChecker>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IAuditLogService, SEAL_Application.Services.AuditLogService>();
+builder.Services.AddScoped<INotificationService, SEAL_Application.Services.NotificationService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
+builder.Services.AddHttpClient<IGitHostingService, GitHostingService>(client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(5);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("SEAL-Hackathon/1.0");
+});
 builder.Services.AddSingleton<ICloudStorageService, CloudflyStorageService>();
 builder.Services.AddHttpClient();
 

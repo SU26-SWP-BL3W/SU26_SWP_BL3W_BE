@@ -14,6 +14,9 @@ using SEAL_Application.Features.Scores.Queries.GetScoreDetail.Models;
 using SEAL_Application.Features.Scores.Queries.GetScoresByEventRoleId;
 using SEAL_Application.Features.Scores.Queries.GetTeamScoreBreakdown;
 using SEAL_Application.Features.Scores.Queries.GetTeamScoreBreakdown.Models;
+using SEAL_Application.Features.Scores.Queries.GetTrackCalibration;
+using SEAL_Application.Features.Scores.Queries.GetTrackCalibration.Models;
+using SEAL_Application.Features.Scores.Queries.ExportScoresCsv;
 using SEAL_Application.Features.Scores.Models;
 using SEAL_Backend.Helpers;
 using SEAL_Backend.Filters;
@@ -39,11 +42,6 @@ namespace SEAL_Backend.Controllers
         }
 
         /// <summary>
-        /// Tạo một phiếu chấm mới (TotalScore khởi tạo = 0, sẽ được tính lại khi thêm ScoreDetail).
-        /// </summary>
-        /// <param name="requestModel">Thông tin phiếu chấm cần tạo.</param>
-        /// <returns>Thông tin phiếu chấm vừa tạo.</returns>
-        /// <summary>
         /// Thí sinh (thành viên đội) xem breakdown điểm theo từng tiêu chí + từng giám khảo cho đội mình.
         /// Chỉ thành viên của đội, EventCoordinator hoặc Admin được xem (kiểm tra trong handler).
         /// </summary>
@@ -58,6 +56,47 @@ namespace SEAL_Backend.Controllers
         {
             var result = await _mediator.Send(new GetTeamScoreBreakdownQuery(teamId));
             return OkResponse(result);
+        }
+
+        /// <summary>
+        /// Ma trận hiệu chuẩn: điểm từng giám khảo × bài nộp của hạng mục (RBL).
+        /// Chỉ Admin hoặc Điều phối viên của sự kiện.
+        /// </summary>
+        /// <param name="trackId">ID hạng mục.</param>
+        [HttpGet("track/{trackId}/calibration")]
+        [Authorize]
+        [ProducesResponseType(typeof(BaseResponse<TrackCalibrationModel>), 200)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(403)]
+        public async Task<IActionResult> GetTrackCalibration(string trackId)
+        {
+            var result = await _mediator.Send(new GetTrackCalibrationQuery(trackId));
+            return OkResponse(result);
+        }
+
+        /// <summary>
+        /// Xuất CSV điểm theo tiêu chí. Mặc định ẩn danh (Team-Tn / Judge-Jn) phục vụ RBL.
+        /// Trả file thô (không bọc BaseResponse) để FE tải blob.
+        /// </summary>
+        /// <param name="eventId">ID sự kiện.</param>
+        /// <param name="anonymize">true = ẩn danh Team-Tn / Judge-Jn.</param>
+        [HttpGet("export/{eventId}")]
+        [Authorize]
+        [ProducesResponseType(typeof(FileContentResult), 200)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(403)]
+        public async Task<IActionResult> ExportScoresCsv(string eventId, [FromQuery] bool anonymize = true)
+        {
+            var result = await _mediator.Send(new ExportScoresCsvQuery
+            {
+                EventId = eventId,
+                Anonymize = anonymize
+            });
+            if (result.IsFailure)
+            {
+                return OkResponse(result);
+            }
+            return File(result.Value, "text/csv; charset=utf-8", $"SEAL_Scores_{eventId}.csv");
         }
 
         /// <summary>
@@ -155,7 +194,10 @@ namespace SEAL_Backend.Controllers
         /// Lấy danh sách phiếu chấm theo ID giám khảo (EventRole).
         /// </summary>
         /// <param name="eventRoleId">ID của EventRole (giám khảo).</param>
-        /// <param name="query">Tham số phân trang.</param>
+        /// <param name="pageNumber">Trang.</param>
+        /// <param name="pageSize">Số dòng mỗi trang.</param>
+        /// <param name="sortBy">Trường sắp xếp.</param>
+        /// <param name="isAscending">true = tăng dần.</param>
         /// <returns>Danh sách phiếu chấm của giám khảo (phân trang).</returns>
         [HttpGet("event-role/{eventRoleId}")]
         [EventRoleAuthorize(EventRoleType.EventCoordinator, EventRoleType.Judge)]

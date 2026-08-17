@@ -24,17 +24,20 @@ namespace SEAL_Application.Features.Teams.Commands.ApproveTeamRegistration
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
         private readonly IEmailService _emailService;
+        private readonly INotificationService _notifications;
 
         public ApproveTeamRegistrationCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEventRoleChecker eventRoleChecker,
-            IEmailService emailService)
+            IEmailService emailService,
+            INotificationService notifications)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
             _emailService = emailService;
+            _notifications = notifications;
         }
 
         public async Task<Result<bool>> Handle(ApproveTeamRegistrationCommand request, CancellationToken cancellationToken)
@@ -76,6 +79,20 @@ namespace SEAL_Application.Features.Teams.Commands.ApproveTeamRegistration
             team.Status = TeamStatus.Registered;
             team.LastUpdatedTime = CoreHelper.SystemTimeNow;
             await _unitOfWork.GetRepository<Team>().UpdateAsync(team);
+
+            var memberIds = await _unitOfWork.GetRepository<EventRole>().Entities
+                .Where(er => er.TeamId == team.Id
+                          && (er.RoleName == EventRoleType.TeamLeader || er.RoleName == EventRoleType.TeamMember))
+                .Select(er => er.UserId)
+                .ToListAsync(cancellationToken);
+            await _notifications.NotifyManyAsync(
+                memberIds,
+                "Đội đã được duyệt",
+                $"Đội {team.Name} đã được duyệt, có thể nộp bài.",
+                "success",
+                "/my-team",
+                cancellationToken);
+
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // 5. Báo cho toàn đội (lỗi SMTP không chặn nghiệp vụ duyệt)

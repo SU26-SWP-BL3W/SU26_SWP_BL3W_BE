@@ -10,6 +10,9 @@ namespace SEAL_Application.Features.SubmitResults.Commands.UpdateSubmitResult.Mo
 
         /// <summary>Bỏ trống/null = giữ URL cũ.</summary>
         public string? SubmissionUrl { get; set; }
+        public string? RepoUrl { get; set; }
+        public string? DemoUrl { get; set; }
+        public string? SlideUrl { get; set; }
 
         /// <summary>null = giữ mô tả cũ; chuỗi rỗng = xóa mô tả.</summary>
         public string? Description { get; set; }

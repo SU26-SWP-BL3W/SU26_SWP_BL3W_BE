@@ -23,6 +23,8 @@ using SEAL_Application.Features.Teams.Commands.ConfirmTeamRegistration;
 using SEAL_Application.Features.Teams.Commands.ApproveTeamRegistration;
 using SEAL_Application.Features.Teams.Commands.RejectTeamRegistration;
 using SEAL_Application.Features.Teams.Commands.RejectTeamRegistration.Models;
+using SEAL_Application.Features.Teams.Commands.DisqualifyTeam;
+using SEAL_Application.Features.Teams.Commands.DisqualifyTeam.Models;
 using SEAL_Application.Features.Teams.Commands.TransferTeamLeader;
 using SEAL_Application.Features.Teams.Queries.GetTeamById;
 using SEAL_Application.Features.Teams.Queries.GetTeamById.Models;
@@ -80,9 +82,9 @@ namespace SEAL_Backend.Controllers
         [Authorize]
         [ProducesResponseType(typeof(BaseResponse<MyTeamResponseModel>), 200)]
         [ProducesResponseType(404)]
-        public async Task<IActionResult> GetMyTeam([FromQuery] string eventId)
+        public async Task<IActionResult> GetMyTeam([FromQuery] string? eventId)
         {
-            var result = await _mediator.Send(new GetMyTeamQuery { EventId = eventId });
+            var result = await _mediator.Send(new GetMyTeamQuery { EventId = eventId ?? string.Empty });
             if (result == null) return NotFound();
             return OkResponse(result);
         }
@@ -365,6 +367,20 @@ namespace SEAL_Backend.Controllers
         public async Task<IActionResult> RejectRegistration(string teamId, [FromBody] RejectTeamRegistrationRequestModel model)
         {
             var result = await _mediator.Send(new RejectTeamRegistrationCommand(teamId, model?.Reason ?? string.Empty));
+            return OkResponse(result);
+        }
+
+        /// <summary>
+        /// EC/Admin LOẠI đội đang thi vì vi phạm. Lý do bắt buộc, lưu LastRejectReason; kết quả nháp của đội bị xóa.
+        /// </summary>
+        [HttpPost("{teamId}/disqualify")]
+        [EventRoleAuthorize(EventRoleType.EventCoordinator)]
+        [ProducesResponseType(typeof(BaseResponse<bool>), 200)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(403)]
+        public async Task<IActionResult> Disqualify(string teamId, [FromBody] DisqualifyTeamRequestModel model)
+        {
+            var result = await _mediator.Send(new DisqualifyTeamCommand(teamId, model?.Reason ?? string.Empty));
             return OkResponse(result);
         }
     }

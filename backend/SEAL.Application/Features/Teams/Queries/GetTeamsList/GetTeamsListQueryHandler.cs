@@ -6,6 +6,7 @@ using SEAL_Application.Commons;
 using SEAL_Application.Features.Teams.Queries.GetTeamsList.Models;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Entity;
+using SEAL_Domain.Entity.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -56,14 +57,21 @@ namespace SEAL_Application.Features.Teams.Queries.GetTeamsList
                 query = query.Where(t => t.Name.ToLower().Contains(request.SearchName.ToLower()));
             }
 
+            if (request.Status.HasValue)
+            {
+                query = query.Where(t => t.Status == request.Status.Value);
+            }
+
             return await query.ToPagedResultAsync(
                 request,
                 t => new TeamListItemModel
                 {
                     Id = t.Id,
                     EventId = t.EventId,
+                    TrackId = t.TrackId,
                     Name = t.Name,
-                    Description = t.Description,
+                    Description = t.Description ?? string.Empty,
+                    Status = t.Status,
                     IsActive = t.IsActive,
                     CreatedTime = t.CreatedTime
                 },

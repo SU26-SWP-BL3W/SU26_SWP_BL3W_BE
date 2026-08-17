@@ -28,7 +28,7 @@ namespace SEAL_Application.Features.Prizes.Commands.DeletePrize
                 return BaseException.BadRequestInvaildInputResponse("Giải thưởng đang được gán cho kết quả nên không thể xóa.");
             }
 
-            _unitOfWork.GetRepository<Prize>().DeleteAsync(prize);
+            await _unitOfWork.GetRepository<Prize>().DeleteAsync(prize);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return true;

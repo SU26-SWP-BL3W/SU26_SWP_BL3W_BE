@@ -1,9 +1,11 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Linq;
+using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
+using SEAL_Domain.Entity.Enums;
 using SEAL_Domain.Ultis;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,10 +15,12 @@ namespace SEAL_Application.Features.Tracks.Commands.AssignTemplateToTrack
     public class AssignTemplateToTrackCommandHandler : IRequestHandler<AssignTemplateToTrackCommand, Result<bool>>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IAuditLogService _auditLogService;
 
-        public AssignTemplateToTrackCommandHandler(IUnitOfWork unitOfWork)
+        public AssignTemplateToTrackCommandHandler(IUnitOfWork unitOfWork, IAuditLogService auditLogService)
         {
             _unitOfWork = unitOfWork;
+            _auditLogService = auditLogService;
         }
 
         public async Task<Result<bool>> Handle(AssignTemplateToTrackCommand request, CancellationToken cancellationToken)
@@ -54,10 +58,19 @@ namespace SEAL_Application.Features.Tracks.Commands.AssignTemplateToTrack
                 }
             }
 
+            var previousTemplateId = track.TemplateId;
             track.TemplateId = request.Model.TemplateId;
             track.LastUpdatedTime = CoreHelper.SystemTimeNow;
 
             await _unitOfWork.GetRepository<Track>().UpdateAsync(track);
+            await _auditLogService.AppendAsync(
+                AuditActions.AssignTemplateToTrack,
+                AuditEntityTypes.Track,
+                track.Id,
+                track.EventId,
+                $"Gán template {template.TemplateName} cho hạng mục {track.TrackName}",
+                new { previousTemplateId, newTemplateId = request.Model.TemplateId },
+                cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return true;

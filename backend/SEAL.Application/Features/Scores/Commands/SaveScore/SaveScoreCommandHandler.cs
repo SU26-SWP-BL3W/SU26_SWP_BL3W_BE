@@ -1,9 +1,11 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Features.Scores.Commands.SaveScore.Models;
+using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
+using SEAL_Domain.Entity.Enums;
 using SEAL_Domain.Ultis;
 using System;
 using System.Collections.Generic;
@@ -24,15 +26,18 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
         private readonly IUnitOfWork _unitOfWork;
         private readonly SEAL_Application.Interfaces.ICurrentUserService _currentUserService;
         private readonly SEAL_Application.Interfaces.IEventRoleChecker _eventRoleChecker;
+        private readonly IAuditLogService _auditLogService;
 
         public SaveScoreCommandHandler(
             IUnitOfWork unitOfWork,
             SEAL_Application.Interfaces.ICurrentUserService currentUserService,
-            SEAL_Application.Interfaces.IEventRoleChecker eventRoleChecker)
+            SEAL_Application.Interfaces.IEventRoleChecker eventRoleChecker,
+            IAuditLogService auditLogService)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
+            _auditLogService = auditLogService;
         }
 
         public async Task<Result<SaveScoreResponseModel>> Handle(SaveScoreCommand request, CancellationToken cancellationToken)
@@ -77,6 +82,12 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
             if (submit == null)
             {
                 return BaseException.BadRequestNotFoundResponse($"Bài nộp '{m.SubmitResultId}' không tồn tại.");
+            }
+
+            var scoredTeam = await _unitOfWork.GetRepository<Team>().GetByIdAsync(submit.TeamId);
+            if (scoredTeam != null && scoredTeam.Status == SEAL_Domain.Entity.Enums.TeamStatus.Disqualified)
+            {
+                return BaseException.BadRequestInvaildInputResponse("Đội đã bị loại nên không thể chấm bài.");
             }
             if (eventRole.RoleName == SEAL_Domain.Entity.Enums.EventRoleType.Judge
                 && !string.IsNullOrEmpty(eventRole.TrackId)
@@ -279,6 +290,18 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
             if (toRemove.Count > 0)
             {
                 await detailRepo.DeleteRangeAsync(toRemove);
+            }
+
+            if (m.IsSubmitted)
+            {
+                await _auditLogService.AppendAsync(
+                    AuditActions.SaveScoreSubmitted,
+                    AuditEntityTypes.Score,
+                    score.Id,
+                    eventRole.EventId,
+                    $"Chốt phiếu chấm {score.TotalScore} cho bài {submit.Id}",
+                    new { submit.TeamId, submit.TrackId, score.TotalScore },
+                    cancellationToken);
             }
 
             try
