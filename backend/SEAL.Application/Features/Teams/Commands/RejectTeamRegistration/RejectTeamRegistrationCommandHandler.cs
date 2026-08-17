@@ -2,6 +2,7 @@
 
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
@@ -26,19 +27,22 @@ namespace SEAL_Application.Features.Teams.Commands.RejectTeamRegistration
         private readonly IEventRoleChecker _eventRoleChecker;
         private readonly IEmailService _emailService;
         private readonly INotificationService _notifications;
+        private readonly ILogger<RejectTeamRegistrationCommandHandler> _logger;
 
         public RejectTeamRegistrationCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEventRoleChecker eventRoleChecker,
             IEmailService emailService,
-            INotificationService notifications)
+            INotificationService notifications,
+            ILogger<RejectTeamRegistrationCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
             _emailService = emailService;
             _notifications = notifications;
+            _logger = logger;
         }
 
         public async Task<Result<bool>> Handle(RejectTeamRegistrationCommand request, CancellationToken cancellationToken)
@@ -113,7 +117,7 @@ namespace SEAL_Application.Features.Teams.Commands.RejectTeamRegistration
                     $"<p><b>Lý do:</b> {reasonHtml}</p>" +
                     $"<p>Đội đã được mở khóa — vui lòng cập nhật thành viên rồi <b>chốt danh sách lại</b>.</p>";
                 try { await _emailService.SendEmailAsync(leader.Email, $"[SEAL] Đội {team.Name} bị từ chối duyệt", body); }
-                catch { /* Bỏ qua lỗi SMTP */ }
+                catch (Exception ex) { _logger.LogWarning(ex, "Gửi email từ chối đội thất bại cho {Email}", leader.Email); }
             }
 
             return true;

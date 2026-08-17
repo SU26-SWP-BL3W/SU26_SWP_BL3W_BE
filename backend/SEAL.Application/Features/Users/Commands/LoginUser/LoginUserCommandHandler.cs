@@ -97,7 +97,8 @@ namespace SEAL_Application.Features.Users.Commands.LoginUser
                 Email = user.Email,
                 FullName = user.FullName,
                 IsAdmin = user.IsAdmin,
-                IsStudent = user.IsStudent
+                IsStudent = user.IsStudent,
+                MustChangePassword = user.MustChangePassword
             };
         }
     }

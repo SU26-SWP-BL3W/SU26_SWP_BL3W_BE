@@ -2,6 +2,7 @@ using Google.Apis.Auth;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using SEAL_Application.Features.Users.Commands.LoginUser.Models;
 using SEAL_Application.Interfaces;
@@ -23,19 +24,22 @@ namespace SEAL_Application.Features.Users.Commands.GoogleLogin
         private readonly JwtSettings _jwtSettings;
         private readonly IConfiguration _config;
         private readonly IEmailService _emailService;
+        private readonly ILogger<GoogleLoginCommandHandler> _logger;
 
         public GoogleLoginCommandHandler(
             IUnitOfWork unitOfWork,
             ITokenService tokenService,
             IOptions<JwtSettings> jwtSettings,
             IConfiguration config,
-            IEmailService emailService)
+            IEmailService emailService,
+            ILogger<GoogleLoginCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _tokenService = tokenService;
             _jwtSettings = jwtSettings.Value;
             _config = config;
             _emailService = emailService;
+            _logger = logger;
         }
 
         public async Task<Result<LoginUserResponseModel>> Handle(GoogleLoginCommand request, CancellationToken cancellationToken)
@@ -156,9 +160,10 @@ namespace SEAL_Application.Features.Users.Commands.GoogleLogin
                 }
                 await _emailService.SendEmailAsync(user.Email, subject, body);
             }
-            catch
+            catch (Exception ex)
             {
                 // nuốt lỗi gửi mail (SMTP lỗi/chưa cấu hình) — đăng nhập vẫn thành công.
+                _logger.LogWarning(ex, "Gửi email thông báo Google Login thất bại cho {Email}", user.Email);
             }
 
             return new LoginUserResponseModel
@@ -169,7 +174,8 @@ namespace SEAL_Application.Features.Users.Commands.GoogleLogin
                 Email = user.Email,
                 FullName = user.FullName,
                 IsAdmin = user.IsAdmin,
-                IsStudent = user.IsStudent
+                IsStudent = user.IsStudent,
+                MustChangePassword = user.MustChangePassword
             };
         }
     }

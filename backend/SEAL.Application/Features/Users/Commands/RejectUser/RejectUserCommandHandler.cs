@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using SEAL_Application.Commons;
 using SEAL_Application.Features.Users.Models;
 using SEAL_Application.Interfaces;
@@ -22,19 +23,22 @@ namespace SEAL_Application.Features.Users.Commands.RejectUser
         private readonly IEventRoleChecker _eventRoleChecker;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<RejectUserCommandHandler> _logger;
 
         public RejectUserCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEventRoleChecker eventRoleChecker,
             IEmailService emailService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<RejectUserCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
             _emailService = emailService;
             _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task<Result<UserModel>> Handle(RejectUserCommand request, CancellationToken cancellationToken)
@@ -160,9 +164,10 @@ namespace SEAL_Application.Features.Users.Commands.RejectUser
                     "</td></tr></table></td></tr></table></div>";
                 await _emailService.SendEmailAsync(userToReject.Email, "[SEAL] Hồ sơ của bạn đã bị từ chối", emailBody);
             }
-            catch
+            catch (Exception ex)
             {
                 // Bỏ qua lỗi gửi email — thao tác từ chối đã được lưu thành công.
+                _logger.LogWarning(ex, "Gửi email thông báo từ chối hồ sơ thất bại cho {Email}", userToReject.Email);
             }
 
             return new UserModel

@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using SEAL_Application.Features.Users.Commands.RequestUnblock.Models;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
@@ -27,6 +28,7 @@ namespace SEAL_Application.Features.Users.Commands.RequestUnblock
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
         private readonly IMemoryCache _memoryCache;
+        private readonly ILogger<RequestUnblockCommandHandler> _logger;
 
         // Ngưỡng bị chặn cập nhật hồ sơ - đồng bộ với UpdateStudentProfileCommandHandler.
         private const int RejectionLockThreshold = 2;
@@ -37,12 +39,14 @@ namespace SEAL_Application.Features.Users.Commands.RequestUnblock
             IUnitOfWork unitOfWork,
             IEmailService emailService,
             IConfiguration configuration,
-            IMemoryCache memoryCache)
+            IMemoryCache memoryCache,
+            ILogger<RequestUnblockCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
             _configuration = configuration;
             _memoryCache = memoryCache;
+            _logger = logger;
         }
 
         public async Task<Result<RequestUnblockResponseModel>> Handle(RequestUnblockCommand request, CancellationToken cancellationToken)
@@ -102,9 +106,10 @@ namespace SEAL_Application.Features.Users.Commands.RequestUnblock
                     "[SEAL] Đã nhận yêu cầu gỡ khóa tài khoản",
                     BuildUserEmail(user, supportEmail));
             }
-            catch
+            catch (Exception ex)
             {
                 // Bỏ qua lỗi gửi email — vẫn trả về thông báo chung.
+                _logger.LogWarning(ex, "Gửi email yêu cầu gỡ khóa thất bại cho {Email}", user.Email);
             }
 
             return genericResponse;
@@ -118,7 +123,7 @@ namespace SEAL_Application.Features.Users.Commands.RequestUnblock
             var reasonItems = string.Join("", rejections.Select((r, i) =>
                 $"<li style=\"margin-bottom:6px;color:#374151;font-size:13px;line-height:1.5;\"><strong>Lần {total - i}:</strong> {WebUtility.HtmlEncode(r.Reason ?? string.Empty)}</li>"));
             // Trang quản trị người dùng (không có route /admin — dùng /users, nơi admin xem & xử lý tài khoản).
-            var adminLink = $"{frontendUrl}/users";
+            var adminLink = $"{frontendUrl}/admin/users";
 
             return
                 "<div style=\"background:#f4f5f7;padding:24px 12px;font-family:Arial,Helvetica,sans-serif;\">" +

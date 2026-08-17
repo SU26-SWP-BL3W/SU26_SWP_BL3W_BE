@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using SEAL_Application.Commons;
 using SEAL_Application.Features.EventRoles.Commands.InviteEventRole.Models;
 using SEAL_Application.Interfaces;
@@ -23,17 +24,20 @@ namespace SEAL_Application.Features.EventRoles.Commands.InviteEventRole
         private readonly ICurrentUserService _currentUserService;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<InviteEventRoleCommandHandler> _logger;
 
         public InviteEventRoleCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEmailService emailService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<InviteEventRoleCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _emailService = emailService;
             _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task<Result<InviteEventRoleResponseModel>> Handle(InviteEventRoleCommand request, CancellationToken cancellationToken)
@@ -161,8 +165,11 @@ namespace SEAL_Application.Features.EventRoles.Commands.InviteEventRole
             try
             {
                 var frontendUrl = (_configuration["FrontendUrl"] ?? "https://sealswp391.xyz").TrimEnd('/');
-                var acceptLink = $"{frontendUrl}/invitations/{invitation.Id}?action=accept";
-                var declineLink = $"{frontendUrl}/invitations/{invitation.Id}?action=decline";
+                // Không dùng link accept/decline trực tiếp (GET link tự đổi state rất dễ bị prefetch/quét
+                // bởi email scanner làm chấp nhận/từ chối nhầm) — trỏ về trang "Lời mời của tôi" (đã có sẵn,
+                // xử lý được cả EventRole lẫn Team invitation) để người dùng tự bấm sau khi đăng nhập.
+                var acceptLink = $"{frontendUrl}/my-invitations";
+                var declineLink = $"{frontendUrl}/my-invitations";
                 var roleLabel = invitation.RoleName.ToString();
 
                 var calloutHtml = $"Sự kiện: <b>{eventEntity.EventName}</b>";
@@ -182,7 +189,7 @@ namespace SEAL_Application.Features.EventRoles.Commands.InviteEventRole
                     ctaUrl: acceptLink,
                     ctaText2: "Từ chối",
                     ctaUrl2: declineLink,
-                    ctaFallbackUrl: $"{frontendUrl}/invitations/{invitation.Id}",
+                    ctaFallbackUrl: $"{frontendUrl}/my-invitations",
                     noteHtml: $"Lời mời sẽ hết hạn sau {INVITATION_EXPIRY_HOURS} giờ. Nếu bạn không chấp nhận, vai trò sẽ không được tạo.");
 
                 await _emailService.SendEmailAsync(
@@ -190,9 +197,10 @@ namespace SEAL_Application.Features.EventRoles.Commands.InviteEventRole
                     $"[SEAL] Lời mời làm {roleLabel} tại {eventEntity.EventName}",
                     emailBody);
             }
-            catch
+            catch (Exception ex)
             {
                 // Bỏ qua lỗi gửi email — không ảnh hưởng tới việc tạo lời mời.
+                _logger.LogWarning(ex, "Gửi email lời mời vai trò thất bại cho {Email}", invitedUser.Email);
             }
 
             return new InviteEventRoleResponseModel

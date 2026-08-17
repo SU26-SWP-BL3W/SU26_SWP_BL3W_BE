@@ -45,6 +45,7 @@ namespace SEAL_Application.Features.Users.Queries.GetUserProfile
                 IsAdmin = user.IsAdmin,
                 IsApproved = user.IsApproved,
                 IsFpt = user.IsFpt,
+                MustChangePassword = user.MustChangePassword,
                 PhotoStudentCardUrl = user.PhotoStudentCardUrl
             };
         }

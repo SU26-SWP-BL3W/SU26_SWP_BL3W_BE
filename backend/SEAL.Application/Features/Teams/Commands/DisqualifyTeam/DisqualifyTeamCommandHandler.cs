@@ -2,6 +2,7 @@
 
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
@@ -22,14 +23,17 @@ namespace SEAL_Application.Features.Teams.Commands.DisqualifyTeam
         private readonly IEventRoleChecker _eventRoleChecker;
         private readonly IEmailService _emailService;
         private readonly IAuditLogService _auditLogService;
+        private readonly ILogger<DisqualifyTeamCommandHandler> _logger;
 
         public DisqualifyTeamCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEventRoleChecker eventRoleChecker,
             IEmailService emailService,
-            IAuditLogService auditLogService)
+            IAuditLogService auditLogService,
+            ILogger<DisqualifyTeamCommandHandler> logger)
         {
+            _logger = logger;
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
@@ -107,7 +111,7 @@ namespace SEAL_Application.Features.Teams.Commands.DisqualifyTeam
                     $"<p>Đội <b>{team.Name}</b> trong <b>{eventName}</b> đã bị <b>LOẠI</b> khỏi cuộc thi.</p>" +
                     $"<p><b>Lý do:</b> {reasonHtml}</p>";
                 try { await _emailService.SendEmailAsync(leader.Email, $"[SEAL] Đội {team.Name} bị loại", body); }
-                catch { /* SMTP không chặn nghiệp vụ loại đội */ }
+                catch (Exception ex) { _logger.LogWarning(ex, "Gửi email loại đội thất bại cho {Email}", leader.Email); }
             }
 
             return true;

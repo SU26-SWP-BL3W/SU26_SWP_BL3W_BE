@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
@@ -15,11 +16,13 @@ namespace SEAL_Application.Features.Users.Commands.ResetPassword
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
+        private readonly ILogger<ResetPasswordCommandHandler> _logger;
 
-        public ResetPasswordCommandHandler(IUnitOfWork unitOfWork, IEmailService emailService)
+        public ResetPasswordCommandHandler(IUnitOfWork unitOfWork, IEmailService emailService, ILogger<ResetPasswordCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
+            _logger = logger;
         }
 
         public async Task<Result<bool>> Handle(ResetPasswordCommand request, CancellationToken cancellationToken)
@@ -61,9 +64,10 @@ namespace SEAL_Application.Features.Users.Commands.ResetPassword
                            "<p>Nếu <b>không phải bạn</b> thực hiện, hãy liên hệ ban tổ chức ngay để bảo vệ tài khoản.</p>";
                 await _emailService.SendEmailAsync(user.Email, "[SEAL] Mật khẩu của bạn vừa được thay đổi", body);
             }
-            catch
+            catch (Exception ex)
             {
                 // SMTP lỗi thì bỏ qua — việc đổi mật khẩu đã thành công, không để mail làm hỏng luồng.
+                _logger.LogWarning(ex, "Gửi email cảnh báo đổi mật khẩu thất bại cho {Email}", user.Email);
             }
 
             return true;

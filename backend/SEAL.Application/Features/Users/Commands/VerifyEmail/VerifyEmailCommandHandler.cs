@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using SEAL_Application.Commons;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
@@ -17,12 +18,14 @@ namespace SEAL_Application.Features.Users.Commands.VerifyEmail
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
+        private readonly ILogger<VerifyEmailCommandHandler> _logger;
         private readonly string _frontendUrl;
 
-        public VerifyEmailCommandHandler(IUnitOfWork unitOfWork, IEmailService emailService, IConfiguration configuration)
+        public VerifyEmailCommandHandler(IUnitOfWork unitOfWork, IEmailService emailService, ILogger<VerifyEmailCommandHandler> logger, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
+            _logger = logger;
             _frontendUrl = (configuration["FrontendUrl"] ?? "http://localhost:3000").TrimEnd('/');
         }
 
@@ -48,6 +51,7 @@ namespace SEAL_Application.Features.Users.Commands.VerifyEmail
                 user.IsApproved = true;
                 tempPassword = TempPasswordGenerator.Generate();
                 user.PasswordHash = FixedSaltPasswordHasher.HashPassword(tempPassword);
+                user.MustChangePassword = true;
             }
 
             await _unitOfWork.GetRepository<User>().UpdateAsync(user);
@@ -62,7 +66,7 @@ namespace SEAL_Application.Features.Users.Commands.VerifyEmail
                     cancellationToken);
 
                 // Nút đăng nhập trỏ về trang FE /auth (KHÔNG dùng ApiBaseUrl — production không cấu hình key đó)
-                var loginLink = $"{_frontendUrl}/auth";
+                var loginLink = $"{_frontendUrl}/login";
                 var taiKhoanHtml = $"Email: <b>{user.Email}</b><br>Mật khẩu tạm: <b>{tempPassword}</b>";
 
                 var subject = "[SEAL] Kích hoạt tài khoản thành công";
@@ -96,7 +100,7 @@ namespace SEAL_Application.Features.Users.Commands.VerifyEmail
                         showLoginHint: false);
                 }
                 try { await _emailService.SendEmailAsync(user.Email, subject, body); }
-                catch { }
+                catch (Exception ex) { _logger.LogWarning(ex, "Gửi email mật khẩu tạm thất bại cho {Email}", user.Email); }
             }
 
             return true;

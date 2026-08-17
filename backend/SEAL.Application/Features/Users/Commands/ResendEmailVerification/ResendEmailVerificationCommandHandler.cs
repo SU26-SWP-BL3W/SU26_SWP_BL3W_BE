@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using SEAL_Application.Commons;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
@@ -18,15 +19,18 @@ namespace SEAL_Application.Features.Users.Commands.ResendEmailVerification
         private const int ACTIVATION_EXPIRY_HOURS = 24;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEmailService _emailService;
+        private readonly ILogger<ResendEmailVerificationCommandHandler> _logger;
         private readonly string _frontendUrl;
 
         public ResendEmailVerificationCommandHandler(
             IUnitOfWork unitOfWork,
             IEmailService emailService,
+            ILogger<ResendEmailVerificationCommandHandler> logger,
             IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
+            _logger = logger;
             _frontendUrl = (configuration["FrontendUrl"] ?? "http://localhost:3000").TrimEnd('/');
         }
 
@@ -47,7 +51,7 @@ namespace SEAL_Application.Features.Users.Commands.ResendEmailVerification
             await _unitOfWork.GetRepository<User>().UpdateAsync(user);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            var verificationLink = $"{_frontendUrl}/auth/verify-email?token={user.EmailVerificationToken}";
+            var verificationLink = $"{_frontendUrl}/verify-email?token={user.EmailVerificationToken}";
             var emailBody = EmailTemplate.Render(
                 heading: "Gửi lại liên kết kích hoạt SEAL",
                 greetingName: user.FullName,
@@ -61,7 +65,7 @@ namespace SEAL_Application.Features.Users.Commands.ResendEmailVerification
                 showLoginHint: false);
 
             try { await _emailService.SendEmailAsync(user.Email, "[SEAL] Gửi lại kích hoạt tài khoản", emailBody); }
-            catch { }
+            catch (Exception ex) { _logger.LogWarning(ex, "Gửi lại email kích hoạt thất bại cho {Email}", user.Email); }
 
             return true;
         }

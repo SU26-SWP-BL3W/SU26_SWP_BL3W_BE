@@ -2,6 +2,7 @@
 
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
@@ -25,14 +26,17 @@ namespace SEAL_Application.Features.Teams.Commands.ApproveTeamRegistration
         private readonly IEventRoleChecker _eventRoleChecker;
         private readonly IEmailService _emailService;
         private readonly INotificationService _notifications;
+        private readonly ILogger<ApproveTeamRegistrationCommandHandler> _logger;
 
         public ApproveTeamRegistrationCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEventRoleChecker eventRoleChecker,
             IEmailService emailService,
-            INotificationService notifications)
+            INotificationService notifications,
+            ILogger<ApproveTeamRegistrationCommandHandler> logger)
         {
+            _logger = logger;
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
@@ -110,7 +114,7 @@ namespace SEAL_Application.Features.Teams.Commands.ApproveTeamRegistration
                     $"<p>Đội <b>{team.Name}</b> của bạn đã được <b>DUYỆT</b> tham gia <b>{eventName}</b>.</p>" +
                     $"<p>Đội đã chính thức đủ điều kiện thi đấu và nộp bài.</p>";
                 try { await _emailService.SendEmailAsync(m.Email, $"[SEAL] Đội {team.Name} đã được duyệt", body); }
-                catch { /* Bỏ qua lỗi SMTP */ }
+                catch (Exception ex) { _logger.LogWarning(ex, "Gửi email duyệt đội thất bại cho {Email}", m.Email); }
             }
 
             return true;

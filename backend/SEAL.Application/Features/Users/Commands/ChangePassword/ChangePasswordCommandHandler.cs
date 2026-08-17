@@ -35,6 +35,7 @@ namespace SEAL_Application.Features.Users.Commands.ChangePassword
             }
 
             user.PasswordHash = FixedSaltPasswordHasher.HashPassword(request.Model.NewPassword);
+            user.MustChangePassword = false;
 
             await _unitOfWork.GetRepository<User>().UpdateAsync(user);
             await _unitOfWork.SaveChangesAsync(cancellationToken);

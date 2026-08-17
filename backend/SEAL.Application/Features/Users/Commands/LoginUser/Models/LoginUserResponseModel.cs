@@ -9,5 +9,6 @@ namespace SEAL_Application.Features.Users.Commands.LoginUser.Models
         public string FullName { get; set; } = string.Empty;
         public bool IsAdmin { get; set; }
         public bool IsStudent { get; set; }
+        public bool MustChangePassword { get; set; }
     }
 }
