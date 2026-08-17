@@ -15,6 +15,14 @@ using SEAL_Infrastructure.Persistence.Seeding;
 using SEAL_Infrastructure.Services;
 using SEAL_Infrastructure.UnitOfWork;
 
+// Neu chua ai set ASPNETCORE_ENVIRONMENT (vd chay "dotnet run --no-launch-profile"), .NET mac dinh
+// roi vao Production -> vo tinh noi nham DB that tren Render thay vi DB local. Render luon tu set bien
+// nay khi deploy nen fallback duoi day KHONG anh huong production, chi bao ve may local.
+if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")))
+{
+    Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
