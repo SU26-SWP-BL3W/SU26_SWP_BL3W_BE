@@ -15,10 +15,12 @@ namespace SEAL_Application.Features.EventRoles.Commands.UpdateEventRole
     public class UpdateEventRoleCommandHandler : IRequestHandler<UpdateEventRoleCommand, Result<UpdateEventRoleResponseModel>>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IEventRoleChecker _eventRoleChecker;
 
-        public UpdateEventRoleCommandHandler(IUnitOfWork unitOfWork)
+        public UpdateEventRoleCommandHandler(IUnitOfWork unitOfWork, IEventRoleChecker eventRoleChecker)
         {
             _unitOfWork = unitOfWork;
+            _eventRoleChecker = eventRoleChecker;
         }
 
         public async Task<Result<UpdateEventRoleResponseModel>> Handle(UpdateEventRoleCommand request, CancellationToken cancellationToken)
@@ -95,6 +97,8 @@ namespace SEAL_Application.Features.EventRoles.Commands.UpdateEventRole
 
             await _unitOfWork.GetRepository<EventRole>().UpdateAsync(eventRole);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _eventRoleChecker.InvalidateCache(eventRole.UserId, eventRole.EventId);
 
             return new UpdateEventRoleResponseModel
             {
