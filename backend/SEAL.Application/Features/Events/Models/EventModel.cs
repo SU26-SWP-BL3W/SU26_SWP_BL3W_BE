@@ -16,6 +16,7 @@ namespace SEAL_Application.Features.Events.Models
         public bool Status { get; set; }
         public string? PhotoEventUrl { get; set; }
         public int MaxTeams { get; set; }
+        public int TeamCount { get; set; }
         public DateTimeOffset CreatedTime { get; set; }
         public DateTimeOffset LastUpdatedTime { get; set; }
 

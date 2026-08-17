@@ -24,6 +24,7 @@ namespace SEAL_Application.Features.Events.Queries.GetAllEvents
         public async Task<Result<PagedResult<EventModel>>> Handle(GetAllEventsQuery request, CancellationToken cancellationToken)
         {
             var query = _unitOfWork.GetRepository<Event>().Entities;
+            var teams = _unitOfWork.GetRepository<Team>().Entities;
 
             if (!string.IsNullOrWhiteSpace(request.SearchName))
             {
@@ -51,6 +52,7 @@ namespace SEAL_Application.Features.Events.Queries.GetAllEvents
                     Status = e.Status,
                     PhotoEventUrl = e.PhotoEventUrl,
                     MaxTeams = e.MaxTeams,
+                    TeamCount = teams.Count(t => t.EventId == e.Id),
                     CreatedTime = e.CreatedTime,
                     LastUpdatedTime = e.LastUpdatedTime
                 },
