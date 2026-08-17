@@ -1,5 +1,6 @@
 using MediatR;
 using SEAL_Application.Features.EventRoles.Commands.RespondEventRoleInvitation.Models;
+using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
@@ -20,10 +21,12 @@ namespace SEAL_Application.Features.EventRoles.Commands.DeclineEventRoleInvitati
     public class DeclineEventRoleInvitationCommandHandler : IRequestHandler<DeclineEventRoleInvitationCommand, Result<RespondEventRoleInvitationResponseModel>>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly INotificationService _notifications;
 
-        public DeclineEventRoleInvitationCommandHandler(IUnitOfWork unitOfWork)
+        public DeclineEventRoleInvitationCommandHandler(IUnitOfWork unitOfWork, INotificationService notifications)
         {
             _unitOfWork = unitOfWork;
+            _notifications = notifications;
         }
 
         public async Task<Result<RespondEventRoleInvitationResponseModel>> Handle(DeclineEventRoleInvitationCommand request, CancellationToken cancellationToken)
@@ -50,6 +53,18 @@ namespace SEAL_Application.Features.EventRoles.Commands.DeclineEventRoleInvitati
                     : EventRoleInvitationStatus.Rejected;
                 invitation.RespondedAt = now;
                 await _unitOfWork.GetRepository<EventRoleInvitation>().UpdateAsync(invitation);
+
+                if (invitation.Status == EventRoleInvitationStatus.Rejected && !string.IsNullOrEmpty(invitation.InvitedByUserId))
+                {
+                    await _notifications.NotifyAsync(
+                        invitation.InvitedByUserId,
+                        "Lời mời vai trò bị từ chối",
+                        $"Một lời mời đảm nhận vai trò {invitation.RoleName} đã bị từ chối.",
+                        "warning",
+                        "/coordinator/staff",
+                        cancellationToken);
+                }
+
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }
 

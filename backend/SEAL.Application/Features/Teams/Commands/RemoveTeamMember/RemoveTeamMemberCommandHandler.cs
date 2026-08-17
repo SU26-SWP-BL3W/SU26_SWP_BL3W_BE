@@ -93,6 +93,8 @@ namespace SEAL_Application.Features.Teams.Commands.RemoveTeamMember
             await _unitOfWork.GetRepository<EventRole>().DeleteAsync(memberRole);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
+            _eventRoleChecker.InvalidateCache(request.UserId, team.EventId);
+
             return true;
         }
     }
