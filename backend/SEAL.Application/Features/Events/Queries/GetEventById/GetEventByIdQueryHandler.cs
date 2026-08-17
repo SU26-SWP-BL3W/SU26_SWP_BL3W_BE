@@ -77,6 +77,7 @@ namespace SEAL_Application.Features.Events.Queries.GetEventById
                 {
                     Id = p.Id,
                     EventId = p.EventId,
+                    TrackId = p.TrackId,
                     PrizeName = p.PrizeName,
                     Value = p.Value,
                     Quantity = p.Quantity

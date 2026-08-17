@@ -18,6 +18,12 @@ namespace SEAL_Infrastructure.Persistence.Configurations
                    .WithOne(x => x.Prize)
                    .HasForeignKey(x => x.PrizeId)
                    .OnDelete(DeleteBehavior.SetNull); // SetNull so deleting a prize doesn't delete the final result
+
+            // 1 Track - N Prizes (optional: Prize.TrackId có thể null = giải chung toàn sự kiện)
+            builder.HasOne(x => x.Track)
+                   .WithMany()
+                   .HasForeignKey(x => x.TrackId)
+                   .OnDelete(DeleteBehavior.SetNull);
         }
     }
 }

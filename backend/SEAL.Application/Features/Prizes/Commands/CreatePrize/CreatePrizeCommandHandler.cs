@@ -23,9 +23,19 @@ namespace SEAL_Application.Features.Prizes.Commands.CreatePrize
             var eventEntity = await _unitOfWork.GetRepository<Event>().GetByIdAsync(request.EventId);
             if (eventEntity == null) return BaseException.BadRequestNotFoundResponse("Event not found");
 
+            if (!string.IsNullOrEmpty(request.Payload.TrackId))
+            {
+                var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(request.Payload.TrackId);
+                if (track == null || track.EventId != request.EventId)
+                {
+                    return BaseException.BadRequestNotFoundResponse("Track không tồn tại hoặc không thuộc sự kiện này.");
+                }
+            }
+
             var prize = new Prize
             {
                 EventId = request.EventId,
+                TrackId = request.Payload.TrackId,
                 PrizeName = request.Payload.PrizeName,
                 Value = request.Payload.Value,
                 Quantity = request.Payload.Quantity
@@ -38,6 +48,7 @@ namespace SEAL_Application.Features.Prizes.Commands.CreatePrize
             {
                 Id = prize.Id,
                 EventId = prize.EventId,
+                TrackId = prize.TrackId,
                 PrizeName = prize.PrizeName,
                 Value = prize.Value,
                 Quantity = prize.Quantity
