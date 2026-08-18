@@ -3,6 +3,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using SEAL_Application.Commons;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
@@ -117,10 +118,14 @@ namespace SEAL_Application.Features.Teams.Commands.DisqualifyTeam
             foreach (var leader in leaders)
             {
                 if (leader == null || string.IsNullOrEmpty(leader.Email)) continue;
-                var body =
-                    $"<h3>Chào {leader.FullName},</h3>" +
-                    $"<p>Đội <b>{team.Name}</b> trong <b>{eventName}</b> đã bị <b>LOẠI</b> khỏi cuộc thi.</p>" +
-                    $"<p><b>Lý do:</b> {reasonHtml}</p>";
+                var body = EmailTemplate.Render(
+                    heading: "Đội thi đã bị loại",
+                    greetingName: leader.FullName,
+                    introHtml: $"Đội <b>{team.Name}</b> trong <b>{eventName}</b> đã bị <b>LOẠI</b> khỏi cuộc thi.",
+                    calloutLabel: "Lý do",
+                    calloutHtml: reasonHtml,
+                    calloutKind: EmailTemplate.Callout.Danger,
+                    showLoginHint: false);
                 try { await _emailService.SendEmailAsync(leader.Email, $"[SEAL] Đội {team.Name} bị loại", body); }
                 catch (Exception ex) { _logger.LogWarning(ex, "Gửi email loại đội thất bại cho {Email}", leader.Email); }
             }

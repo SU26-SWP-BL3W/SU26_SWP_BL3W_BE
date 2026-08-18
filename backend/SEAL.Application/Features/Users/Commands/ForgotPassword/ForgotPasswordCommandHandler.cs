@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using SEAL_Application.Commons;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Entity;
@@ -84,12 +85,14 @@ namespace SEAL_Application.Features.Users.Commands.ForgotPassword
 
             var frontendUrl = (_configuration["FrontendUrl"] ?? "https://swp391-frontend.vercel.app").TrimEnd('/');
             var resetLink = $"{frontendUrl}/reset-password?token={resetToken}";
-            var body =
-                $"<h3>Chào {user.FullName},</h3>" +
-                $"<p>Bạn (hoặc ai đó) đã yêu cầu đặt lại mật khẩu cho tài khoản <b>{user.Email}</b>.</p>" +
-                $"<p>Nhấn vào liên kết dưới đây để đặt lại mật khẩu (hết hạn sau {TOKEN_EXPIRY_HOURS} giờ):</p>" +
-                $"<p><a href='{resetLink}'>{resetLink}</a></p>" +
-                $"<p>Nếu bạn không yêu cầu điều này, hãy bỏ qua email — mật khẩu của bạn không thay đổi.</p>";
+            var body = EmailTemplate.Render(
+                heading: "Đặt lại mật khẩu",
+                greetingName: user.FullName,
+                introHtml: $"Bạn (hoặc ai đó) đã yêu cầu đặt lại mật khẩu cho tài khoản <b>{user.Email}</b>.",
+                ctaText: "Đặt lại mật khẩu",
+                ctaUrl: resetLink,
+                showLoginHint: false,
+                noteHtml: $"Liên kết hết hạn sau {TOKEN_EXPIRY_HOURS} giờ. Nếu bạn không yêu cầu điều này, hãy bỏ qua email — mật khẩu của bạn không thay đổi.");
             try
             {
                 await _emailService.SendEmailAsync(user.Email, "[SEAL] Đặt lại mật khẩu", body);
