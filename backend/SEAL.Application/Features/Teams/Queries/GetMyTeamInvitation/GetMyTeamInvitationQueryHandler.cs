@@ -34,12 +34,16 @@ namespace SEAL_Application.Features.Teams.Queries.GetMyTeamInvitation
                 return new BaseException.UnauthorizedException("Không thể xác thực người dùng. Vui lòng đăng nhập.");
             }
 
-            // Lấy lời mời có trạng thái PendingAccept cho user hiện tại vào đội này
+            // Lấy lời mời đang chờ phản hồi cho user hiện tại vào đội này — gồm CẢ lời mời vào đội
+            // (PendingAccept) LẪN yêu cầu chuyển quyền Trưởng nhóm (TransferPending), vì
+            // RespondTeamInvitation xử lý được cả hai loại nhưng trước đây endpoint này chỉ lọc
+            // PendingAccept -> người nhận yêu cầu chuyển quyền không có cách nào thấy để phản hồi.
             var invitation = await _unitOfWork.GetRepository<TeamInvitation>().Entities
                 .Include(i => i.Team)
-                .Where(i => i.TeamId == request.TeamId 
-                         && i.InvitedUserId == currentUserId 
-                         && i.Status == TeamInvitationStatus.PendingAccept)
+                .Where(i => i.TeamId == request.TeamId
+                         && i.InvitedUserId == currentUserId
+                         && (i.Status == TeamInvitationStatus.PendingAccept
+                          || i.Status == TeamInvitationStatus.TransferPending))
                 .OrderByDescending(i => i.ExpiresAt)
                 .FirstOrDefaultAsync(cancellationToken);
 
@@ -48,9 +52,11 @@ namespace SEAL_Application.Features.Teams.Queries.GetMyTeamInvitation
                 return null;
             }
 
-            // PendingAccept nhưng đã quá hạn -> hiển thị Expired cho đúng thực tế
-            // (cùng cách tính với GetTeamInvitationsQueryHandler).
-            var effectiveStatus = (invitation.Status == TeamInvitationStatus.PendingAccept && invitation.ExpiresAt < DateTime.UtcNow)
+            // Đang chờ (dù là mời vào đội hay chuyển quyền) nhưng đã quá hạn -> hiển thị Expired cho
+            // đúng thực tế (cùng cách tính với GetTeamInvitationsQueryHandler).
+            var isPending = invitation.Status == TeamInvitationStatus.PendingAccept
+                          || invitation.Status == TeamInvitationStatus.TransferPending;
+            var effectiveStatus = (isPending && invitation.ExpiresAt < DateTime.UtcNow)
                 ? TeamInvitationStatus.Expired
                 : invitation.Status;
 
