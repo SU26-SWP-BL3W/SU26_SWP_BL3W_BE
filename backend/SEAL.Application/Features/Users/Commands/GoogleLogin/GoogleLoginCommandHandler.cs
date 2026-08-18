@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using SEAL_Application.Commons;
 using SEAL_Application.Features.Users.Commands.LoginUser.Models;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
@@ -141,22 +142,27 @@ namespace SEAL_Application.Features.Users.Commands.GoogleLogin
                 if (isNewUser)
                 {
                     subject = "[SEAL] Chào mừng bạn đến với SEAL";
-                    body =
-                        $"<h3>Chào {user.FullName},</h3>" +
-                        $"<p>Tài khoản SEAL của bạn vừa được tạo bằng đăng nhập Google với email <b>{user.Email}</b>.</p>" +
-                        $"<p>Email đã được Google xác thực nên bạn có thể đăng nhập bất cứ lúc nào bằng nút " +
-                        $"\"Đăng nhập bằng Google\". Để tham gia cuộc thi, vui lòng hoàn tất hồ sơ thí sinh và chờ ban tổ chức duyệt.</p>" +
-                        $"<p>Nếu không phải bạn thực hiện, vui lòng liên hệ ban tổ chức ngay.</p>";
+                    body = EmailTemplate.Render(
+                        heading: "Chào mừng đến với SEAL",
+                        greetingName: user.FullName,
+                        introHtml: $"Tài khoản SEAL của bạn vừa được tạo bằng đăng nhập Google với email <b>{user.Email}</b>.",
+                        calloutLabel: "Bước tiếp theo",
+                        calloutHtml: "Email đã được Google xác thực nên bạn có thể đăng nhập bất cứ lúc nào bằng nút \"Đăng nhập bằng Google\". Để tham gia cuộc thi, vui lòng hoàn tất hồ sơ thí sinh và chờ ban tổ chức duyệt.",
+                        calloutKind: EmailTemplate.Callout.Success,
+                        noteHtml: "Nếu không phải bạn thực hiện, vui lòng liên hệ ban tổ chức ngay.",
+                        showLoginHint: false);
                 }
                 else
                 {
                     subject = "[SEAL] Có đăng nhập Google mới vào tài khoản của bạn";
-                    body =
-                        $"<h3>Chào {user.FullName},</h3>" +
-                        $"<p>Tài khoản <b>{user.Email}</b> vừa được đăng nhập bằng Google lúc " +
-                        $"{CoreHelper.SystemTimeNow:HH:mm 'ngày' dd/MM/yyyy}.</p>" +
-                        $"<p>Nếu đây là bạn, bạn có thể bỏ qua email này.</p>" +
-                        $"<p>Nếu <b>không phải bạn</b>, vui lòng liên hệ ban tổ chức để được hỗ trợ khoá tài khoản.</p>";
+                    body = EmailTemplate.Render(
+                        heading: "Có đăng nhập Google mới",
+                        greetingName: user.FullName,
+                        introHtml: $"Tài khoản <b>{user.Email}</b> vừa được đăng nhập bằng Google lúc {CoreHelper.SystemTimeNow:HH:mm 'ngày' dd/MM/yyyy}.",
+                        calloutLabel: "Cảnh báo bảo mật",
+                        calloutHtml: "Nếu đây là bạn, có thể bỏ qua email này. Nếu <b>không phải bạn</b>, vui lòng liên hệ ban tổ chức để được hỗ trợ khoá tài khoản.",
+                        calloutKind: EmailTemplate.Callout.Warning,
+                        showLoginHint: false);
                 }
                 await _emailService.SendEmailAsync(user.Email, subject, body);
             }

@@ -3,6 +3,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using SEAL_Application.Commons;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
@@ -109,10 +110,14 @@ namespace SEAL_Application.Features.Teams.Commands.ApproveTeamRegistration
             foreach (var m in members)
             {
                 if (m == null || string.IsNullOrEmpty(m.Email)) continue;
-                var body =
-                    $"<h3>Chào {m.FullName},</h3>" +
-                    $"<p>Đội <b>{team.Name}</b> của bạn đã được <b>DUYỆT</b> tham gia <b>{eventName}</b>.</p>" +
-                    $"<p>Đội đã chính thức đủ điều kiện thi đấu và nộp bài.</p>";
+                var body = EmailTemplate.Render(
+                    heading: "Đội thi đã được duyệt",
+                    greetingName: m.FullName,
+                    introHtml: $"Đội <b>{team.Name}</b> của bạn đã được <b>DUYỆT</b> tham gia <b>{eventName}</b>.",
+                    calloutLabel: "Đã đủ điều kiện thi đấu",
+                    calloutHtml: "Đội đã chính thức đủ điều kiện thi đấu và nộp bài.",
+                    calloutKind: EmailTemplate.Callout.Success,
+                    showLoginHint: false);
                 try { await _emailService.SendEmailAsync(m.Email, $"[SEAL] Đội {team.Name} đã được duyệt", body); }
                 catch (Exception ex) { _logger.LogWarning(ex, "Gửi email duyệt đội thất bại cho {Email}", m.Email); }
             }

@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using SEAL_Application.Commons;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
@@ -59,9 +60,14 @@ namespace SEAL_Application.Features.Users.Commands.ResetPassword
             // #1 Gửi mail CẢNH BÁO mật khẩu vừa được đổi (không chặn luồng nếu SMTP lỗi).
             try
             {
-                var body = $"<h3>Chào {user.FullName},</h3>" +
-                           $"<p>Mật khẩu của tài khoản <b>{user.Email}</b> vừa được thay đổi.</p>" +
-                           "<p>Nếu <b>không phải bạn</b> thực hiện, hãy liên hệ ban tổ chức ngay để bảo vệ tài khoản.</p>";
+                var body = EmailTemplate.Render(
+                    heading: "Mật khẩu vừa được thay đổi",
+                    greetingName: user.FullName,
+                    introHtml: $"Mật khẩu của tài khoản <b>{user.Email}</b> vừa được thay đổi.",
+                    calloutLabel: "Cảnh báo bảo mật",
+                    calloutHtml: "Nếu <b>không phải bạn</b> thực hiện, hãy liên hệ ban tổ chức ngay để bảo vệ tài khoản.",
+                    calloutKind: EmailTemplate.Callout.Warning,
+                    showLoginHint: false);
                 await _emailService.SendEmailAsync(user.Email, "[SEAL] Mật khẩu của bạn vừa được thay đổi", body);
             }
             catch (Exception ex)
