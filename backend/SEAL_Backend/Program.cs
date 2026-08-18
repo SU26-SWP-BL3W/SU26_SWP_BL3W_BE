@@ -3,6 +3,7 @@ using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Microsoft.OpenApi.Models;
@@ -54,7 +55,22 @@ builder.Services.AddHttpClient<IGitHostingService, GitHostingService>(client =>
     client.Timeout = TimeSpan.FromSeconds(5);
     client.DefaultRequestHeaders.UserAgent.ParseAdd("SEAL-Hackathon/1.0");
 });
-builder.Services.AddSingleton<ICloudStorageService, CloudflyStorageService>();
+// Dev local + chua co key S3 that (van con placeholder "YOUR_...") -> dung storage
+// luu xuong dia cuc bo thay vi CloudFly that, de test upload/xem anh duoc tren may
+// ma khong can key that (thuong chi ton tai tren Render production). Set key S3 that
+// vao appsettings.Development.json (gitignored) se tu dong chuyen ve dung CloudFly that.
+var s3AccessKey = builder.Configuration.GetSection("S3").GetValue<string>("AccessKeyId");
+var useLocalStorage = builder.Environment.IsDevelopment()
+    && (string.IsNullOrWhiteSpace(s3AccessKey) || s3AccessKey.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase));
+
+if (useLocalStorage)
+{
+    builder.Services.AddSingleton<ICloudStorageService, LocalFileStorageService>();
+}
+else
+{
+    builder.Services.AddSingleton<ICloudStorageService, CloudflyStorageService>();
+}
 builder.Services.AddHttpClient();
 
 // Seeding
@@ -174,6 +190,17 @@ if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
+// Phuc vu file tinh trong wwwroot/uploads khi dung LocalFileStorageService. PHAI tao
+// thu muc TRUOC khi goi UseStaticFiles: neu wwwroot chua ton tai luc app khoi dong,
+// env.WebRootFileProvider mac dinh bi "khoa" thanh NullFileProvider vinh vien cho ca
+// vong doi process (dinh nghia trong PhysicalFileProvider luc build host) — dung
+// StaticFileOptions voi FileProvider tuong minh de tranh phu thuoc thoi diem khoi dong.
+var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads");
+Directory.CreateDirectory(uploadsPath);
+app.UseStaticFiles(new StaticFileOptions
+{
+    FileProvider = new PhysicalFileProvider(Path.Combine(app.Environment.ContentRootPath, "wwwroot")),
+});
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();

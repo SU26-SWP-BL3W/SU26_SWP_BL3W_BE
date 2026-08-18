@@ -66,5 +66,8 @@ secrets.json
 tmp/
 temp/
 email-outbox/
+
+## Local file storage (LocalFileStorageService — chi dung khi dev local, khong co key S3 that)
+backend/SEAL_Backend/wwwroot/uploads/
 docs/swimlane/.$*.dtmp
 docs/swimlane/.$*.bkp
