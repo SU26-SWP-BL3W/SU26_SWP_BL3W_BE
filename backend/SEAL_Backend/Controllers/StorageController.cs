@@ -18,14 +18,9 @@ namespace SEAL_Backend.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class StorageController : CustomControllerBase
+    public class StorageController(ICloudStorageService cloudStorageService) : CustomControllerBase
     {
-        private readonly ICloudStorageService _cloudStorageService;
-
-        public StorageController(ICloudStorageService cloudStorageService)
-        {
-            _cloudStorageService = cloudStorageService;
-        }
+        private readonly ICloudStorageService _cloudStorageService = cloudStorageService;
 
         /// <summary>
         /// Tải lên một tệp tin bất kỳ lên Cloud Storage.
