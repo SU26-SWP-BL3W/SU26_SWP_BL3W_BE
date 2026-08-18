@@ -245,9 +245,9 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             // Phân quyền EC cho event 2
             await AddEventRoleAsync(ecUser.Id, event2.Id, null, null, EventRoleType.EventCoordinator, event2.EndDate);
 
-            // Phân quyền Giám khảo cho event 2 (Chấm track 2 và track 3)
+            // Phân quyền cho event 2: Giám khảo cho track 2 (Thiết kế), Cố vấn cho track 3 (Phần mềm)
             await AddEventRoleAsync(judgeUser.Id, event2.Id, null, track2.Id, EventRoleType.Judge, event2.EndDate);
-            await AddEventRoleAsync(judgeUser.Id, event2.Id, null, track3.Id, EventRoleType.Judge, event2.EndDate);
+            await AddEventRoleAsync(judgeUser.Id, event2.Id, null, track3.Id, EventRoleType.Mentor, event2.EndDate);
 
             // Lưu DB để có các ID hợp lệ
             await _unitOfWork.SaveChangesAsync(cancellationToken);
