@@ -17,6 +17,9 @@ namespace SEAL_Application.Features.Events.Models
         public string? PhotoEventUrl { get; set; }
         public int MaxTeams { get; set; }
         public int TeamCount { get; set; }
+        /// <summary>Điều phối viên (EC) được gán đầu tiên cho sự kiện, nếu có. Null = chưa phân công.</summary>
+        public string? AssignedCoordinatorName { get; set; }
+        public string? AssignedCoordinatorEmail { get; set; }
         public DateTimeOffset CreatedTime { get; set; }
         public DateTimeOffset LastUpdatedTime { get; set; }
 
