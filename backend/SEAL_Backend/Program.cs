@@ -165,7 +165,15 @@ using (var scope = app.Services.CreateScope())
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI();
-app.UseHttpsRedirection();
+// FE local (.env.local: NEXT_PUBLIC_API_URL=http://localhost:5138/api) luon goi HTTP,
+// khong bao gio HTTPS. Redirect sang https://localhost:7153 chi hai: neu chi bind HTTP
+// (vd chay bang "dotnet run --urls http://...") request treo/loi ket noi; con khi ca 2
+// cong deu bind thi trinh duyet co the chua tin cay chung chi dev tu ky, van fail. Production
+// dung domain Render rieng qua HTTPS that, khong phu thuoc middleware nay.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
