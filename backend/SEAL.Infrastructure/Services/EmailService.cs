@@ -5,6 +5,7 @@ using MimeKit;
 using SEAL_Application.Interfaces;
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SEAL_Infrastructure.Services
@@ -59,10 +60,17 @@ namespace SEAL_Infrastructure.Services
             using var smtp = new SmtpClient();
             var port = int.Parse(_config["EmailSettings:Port"] ?? "587");
 
-            await smtp.ConnectAsync(host, port, SecureSocketOptions.StartTls);
-            await smtp.AuthenticateAsync(username, password);
-            await smtp.SendAsync(email);
-            await smtp.DisconnectAsync(true);
+            // MailKit.Timeout chỉ áp dụng cho socket read/write, KHÔNG chặn được trường hợp
+            // ConnectAsync/AuthenticateAsync treo vô hạn (vd. bắt tay STARTTLS bị nghẽn mạng
+            // im lặng, không có TCP RST). Ép hạn chót cứng bằng CancellationToken để request
+            // luôn fail nhanh và được try/catch phía trên bắt được, thay vì treo cả HTTP request.
+            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(20));
+            smtp.Timeout = 20000;
+
+            await smtp.ConnectAsync(host, port, SecureSocketOptions.StartTls, cts.Token);
+            await smtp.AuthenticateAsync(username, password, cts.Token);
+            await smtp.SendAsync(email, cts.Token);
+            await smtp.DisconnectAsync(true, cts.Token);
         }
     }
 }
