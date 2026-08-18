@@ -43,27 +43,26 @@ namespace SEAL_Backend.Controllers
                 return BadRequest("Tệp tin không được để trống.");
             }
 
-            try
-            {
-                var fileExtension = Path.GetExtension(file.FileName);
-                // Tạo tên file ngẫu nhiên duy nhất tránh ghi đè
-                var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
-                var objectName = $"{folder.Trim().Trim('/')}/{uniqueFileName}";
+            // Khong tu bat exception o day nua — de GlobalExceptionMiddleware xu ly (da
+            // bao BaseResponse<object> voi message chuan). Ban truoc "catch { return
+            // StatusCode(500, chuoi tho) }" tra ve body dang string thuan, khong phai
+            // JSON object {message: ...}, nen FE (doc err.response.data.message) luon
+            // nhan undefined va roi ve thong bao chung chung "Khong the gui ho so",
+            // che mat ly do that (vd thieu cau hinh S3 CloudFly that trong local dev).
+            var fileExtension = Path.GetExtension(file.FileName);
+            // Tạo tên file ngẫu nhiên duy nhất tránh ghi đè
+            var uniqueFileName = $"{Guid.NewGuid()}{fileExtension}";
+            var objectName = $"{folder.Trim().Trim('/')}/{uniqueFileName}";
 
-                using var stream = file.OpenReadStream();
-                var fileUrl = await _cloudStorageService.UploadFileAsync(
-                    stream,
-                    objectName,
-                    file.ContentType,
-                    cancellationToken
-                );
+            using var stream = file.OpenReadStream();
+            var fileUrl = await _cloudStorageService.UploadFileAsync(
+                stream,
+                objectName,
+                file.ContentType,
+                cancellationToken
+            );
 
-                return OkResponse(new { FileUrl = fileUrl });
-            }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Lỗi hệ thống khi tải tệp lên: {ex.Message}");
-            }
+            return OkResponse(new { FileUrl = fileUrl });
         }
 
         /// <summary>
@@ -85,46 +84,39 @@ namespace SEAL_Backend.Controllers
                 return BadRequest("Đường dẫn tệp tin không được trống.");
             }
 
-            try
+            var fileStream = await _cloudStorageService.DownloadFileAsync(fileUrl, cancellationToken);
+            var contentType = "application/octet-stream";
+
+            // Đoán Content-Type dựa vào đuôi mở rộng của URL
+            var uri = new Uri(fileUrl);
+            var path = uri.AbsolutePath;
+            var extension = Path.GetExtension(path).ToLowerInvariant();
+
+            switch (extension)
             {
-                var fileStream = await _cloudStorageService.DownloadFileAsync(fileUrl, cancellationToken);
-                var contentType = "application/octet-stream";
-
-                // Đoán Content-Type dựa vào đuôi mở rộng của URL
-                var uri = new Uri(fileUrl);
-                var path = uri.AbsolutePath;
-                var extension = Path.GetExtension(path).ToLowerInvariant();
-
-                switch (extension)
-                {
-                    case ".jpg":
-                    case ".jpeg":
-                        contentType = "image/jpeg";
-                        break;
-                    case ".png":
-                        contentType = "image/png";
-                        break;
-                    case ".pdf":
-                        contentType = "application/pdf";
-                        break;
-                    case ".zip":
-                        contentType = "application/zip";
-                        break;
-                    case ".rar":
-                        contentType = "application/x-rar-compressed";
-                        break;
-                    case ".docx":
-                        contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-                        break;
-                }
-
-                var fileName = Path.GetFileName(path);
-                return File(fileStream, contentType, fileName);
+                case ".jpg":
+                case ".jpeg":
+                    contentType = "image/jpeg";
+                    break;
+                case ".png":
+                    contentType = "image/png";
+                    break;
+                case ".pdf":
+                    contentType = "application/pdf";
+                    break;
+                case ".zip":
+                    contentType = "application/zip";
+                    break;
+                case ".rar":
+                    contentType = "application/x-rar-compressed";
+                    break;
+                case ".docx":
+                    contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                    break;
             }
-            catch (Exception ex)
-            {
-                return StatusCode(500, $"Lỗi hệ thống khi tải tệp xuống: {ex.Message}");
-            }
+
+            var fileName = Path.GetFileName(path);
+            return File(fileStream, contentType, fileName);
         }
     }
 }
