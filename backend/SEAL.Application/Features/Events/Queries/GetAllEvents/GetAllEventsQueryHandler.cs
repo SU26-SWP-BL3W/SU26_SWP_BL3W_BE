@@ -4,6 +4,7 @@ using SEAL_Application.Commons;
 using SEAL_Application.Features.Events.Models;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Entity;
+using SEAL_Domain.Entity.Enums;
 using System;
 using System.Linq;
 using System.Linq.Expressions;
@@ -25,6 +26,8 @@ namespace SEAL_Application.Features.Events.Queries.GetAllEvents
         {
             var query = _unitOfWork.GetRepository<Event>().Entities;
             var teams = _unitOfWork.GetRepository<Team>().Entities;
+            var coordinatorRoles = _unitOfWork.GetRepository<EventRole>().Entities
+                .Where(er => er.RoleName == EventRoleType.EventCoordinator);
 
             if (!string.IsNullOrWhiteSpace(request.SearchName))
             {
@@ -53,6 +56,16 @@ namespace SEAL_Application.Features.Events.Queries.GetAllEvents
                     PhotoEventUrl = e.PhotoEventUrl,
                     MaxTeams = e.MaxTeams,
                     TeamCount = teams.Count(t => t.EventId == e.Id),
+                    AssignedCoordinatorName = coordinatorRoles
+                        .Where(er => er.EventId == e.Id)
+                        .OrderBy(er => er.AssignedAt)
+                        .Select(er => er.User.FullName)
+                        .FirstOrDefault(),
+                    AssignedCoordinatorEmail = coordinatorRoles
+                        .Where(er => er.EventId == e.Id)
+                        .OrderBy(er => er.AssignedAt)
+                        .Select(er => er.User.Email)
+                        .FirstOrDefault(),
                     CreatedTime = e.CreatedTime,
                     LastUpdatedTime = e.LastUpdatedTime
                 },
