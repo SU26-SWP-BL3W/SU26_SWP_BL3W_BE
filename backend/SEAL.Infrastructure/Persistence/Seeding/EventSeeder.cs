@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using SEAL_Domain.Entity;
+using SEAL_Domain.Entity.Enums;
 using System;
 using System.Threading.Tasks;
 
@@ -19,9 +20,10 @@ namespace SEAL_Infrastructure.Persistence.Seeding
 
         public async Task SeedAsync(DatabaseContext context)
         {
-            if (!await context.Events.AnyAsync())
+            var sampleEvent = await context.Events.FirstOrDefaultAsync(e => e.EventName == "SEAL Innovation Challenge 2024");
+            if (sampleEvent == null)
             {
-                var sampleEvent = new Event
+                sampleEvent = new Event
                 {
                     EventName = "SEAL Innovation Challenge 2024",
                     Season = "Summer",
@@ -35,6 +37,27 @@ namespace SEAL_Infrastructure.Persistence.Seeding
                 context.Events.Add(sampleEvent);
                 await context.SaveChangesAsync();
                 _logger.LogInformation("Seeded sample Event: {EventName}", sampleEvent.EventName);
+            }
+
+            // ec.coordinator@seal.edu.vn (TestUserSeeder) duoc dat ten nhu la tai khoan
+            // EC mau, nhung truoc day khong bao gio duoc gan EventRole=EventCoordinator
+            // o dau ca -> khong tao duoc Event moi (CreateEventCommandValidator yeu cau
+            // IsAdmin hoac da la EventCoordinator cua it nhat 1 event tu truoc). Gan role
+            // ngay tren event mau nay de tai khoan test dung dung nhu ten goi.
+            var ecUser = await context.Users.FirstOrDefaultAsync(u => u.Email == "ec.coordinator@seal.edu.vn");
+            if (ecUser != null && !await context.EventRoles.AnyAsync(
+                er => er.UserId == ecUser.Id && er.RoleName == EventRoleType.EventCoordinator))
+            {
+                context.EventRoles.Add(new EventRole
+                {
+                    UserId = ecUser.Id,
+                    EventId = sampleEvent.Id,
+                    RoleName = EventRoleType.EventCoordinator,
+                    AssignedAt = DateTime.UtcNow,
+                    Notes = "Auto-assigned by seeder as the default test Event Coordinator."
+                });
+                await context.SaveChangesAsync();
+                _logger.LogInformation("Assigned user {Email} as EventCoordinator for event {EventName}", ecUser.Email, sampleEvent.EventName);
             }
         }
     }

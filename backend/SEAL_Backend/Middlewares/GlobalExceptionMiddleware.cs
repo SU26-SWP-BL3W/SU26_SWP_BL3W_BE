@@ -60,9 +60,34 @@ namespace SEAL_Backend.Middlewares
                     message = errorEx.Message;
                     break;
 
+                case FluentValidation.ValidationException validationEx:
+                    statusCodeHelper = StatusCodeHelper.BadRequest;
+                    message = "Dữ liệu yêu cầu không hợp lệ.";
+                    errorData = validationEx.Errors
+                        .GroupBy(e => e.PropertyName)
+                        .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
+                    break;
+
+                case JsonException jsonEx:
+                    statusCodeHelper = StatusCodeHelper.BadRequest;
+                    message = $"Định dạng dữ liệu JSON không hợp lệ: {jsonEx.Message}";
+                    break;
+
+                case BadHttpRequestException badHttpEx:
+                    statusCodeHelper = StatusCodeHelper.BadRequest;
+                    message = badHttpEx.Message;
+                    break;
+
+                case ArgumentException argEx:
+                    statusCodeHelper = StatusCodeHelper.BadRequest;
+                    message = argEx.Message;
+                    break;
+
                 default:
                     statusCodeHelper = StatusCodeHelper.ServerError;
-                    message = "An unexpected error occurred.";
+                    message = exception.Message.Length > 0 && !exception.Message.Contains("stack", StringComparison.OrdinalIgnoreCase) 
+                        ? exception.Message 
+                        : "An unexpected error occurred.";
                     break;
             }
 

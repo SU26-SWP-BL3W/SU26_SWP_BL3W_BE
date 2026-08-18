@@ -12,10 +12,12 @@ namespace SEAL_Application.Features.EventRoles.Commands.RemoveEventRole
     public class RemoveEventRoleCommandHandler : IRequestHandler<RemoveEventRoleCommand, Result<bool>>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IEventRoleChecker _eventRoleChecker;
 
-        public RemoveEventRoleCommandHandler(IUnitOfWork unitOfWork)
+        public RemoveEventRoleCommandHandler(IUnitOfWork unitOfWork, IEventRoleChecker eventRoleChecker)
         {
             _unitOfWork = unitOfWork;
+            _eventRoleChecker = eventRoleChecker;
         }
 
         public async Task<Result<bool>> Handle(RemoveEventRoleCommand request, CancellationToken cancellationToken)
@@ -45,9 +47,14 @@ namespace SEAL_Application.Features.EventRoles.Commands.RemoveEventRole
                     "Vai trò này đã có phiếu chấm điểm nên không thể xóa (xóa sẽ mất toàn bộ điểm đã chấm).");
             }
 
+            var userId = eventRole.UserId;
+            var eventId = eventRole.EventId;
+
             // Xóa cứng
             await _unitOfWork.GetRepository<EventRole>().DeleteAsync(eventRole);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            _eventRoleChecker.InvalidateCache(userId, eventId);
 
             return true;
         }

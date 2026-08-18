@@ -510,6 +510,115 @@ namespace SEAL_Infrastructure.Migrations
                     b.ToTable("FinalResults");
                 });
 
+            modelBuilder.Entity("SEAL_Domain.Entity.FptStudent", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Campus")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DeletedTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("EnrollYear")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("LastUpdatedTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Major")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("StudentCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudentCode")
+                        .IsUnique();
+
+                    b.ToTable("FptStudents");
+                });
+
+            modelBuilder.Entity("SEAL_Domain.Entity.MentorFeedback", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DeletedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DeletedTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastUpdatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("LastUpdatedTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("MentorId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("SubmitResultId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MentorId");
+
+                    b.HasIndex("SubmitResultId");
+
+                    b.ToTable("MentorFeedbacks", (string)null);
+                });
+
             modelBuilder.Entity("SEAL_Domain.Entity.Prize", b =>
                 {
                     b.Property<string>("Id")
@@ -545,6 +654,9 @@ namespace SEAL_Infrastructure.Migrations
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
+                    b.Property<string>("TrackId")
+                        .HasColumnType("text");
+
                     b.Property<string>("Value")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -553,6 +665,8 @@ namespace SEAL_Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("EventId");
+
+                    b.HasIndex("TrackId");
 
                     b.ToTable("Prizes");
                 });
@@ -836,9 +950,10 @@ namespace SEAL_Infrastructure.Migrations
 
                     b.HasIndex("RoundId");
 
-                    b.HasIndex("TeamId");
-
                     b.HasIndex("TrackId");
+
+                    b.HasIndex("TeamId", "TrackId", "RoundId")
+                        .IsUnique();
 
                     b.ToTable("SubmitResults", (string)null);
                 });
@@ -1147,6 +1262,9 @@ namespace SEAL_Infrastructure.Migrations
                     b.Property<DateTimeOffset>("LastUpdatedTime")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
@@ -1347,6 +1465,25 @@ namespace SEAL_Infrastructure.Migrations
                     b.Navigation("Track");
                 });
 
+            modelBuilder.Entity("SEAL_Domain.Entity.MentorFeedback", b =>
+                {
+                    b.HasOne("SEAL_Domain.Entity.User", "Mentor")
+                        .WithMany()
+                        .HasForeignKey("MentorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SEAL_Domain.Entity.SubmitResult", "SubmitResult")
+                        .WithMany()
+                        .HasForeignKey("SubmitResultId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Mentor");
+
+                    b.Navigation("SubmitResult");
+                });
+
             modelBuilder.Entity("SEAL_Domain.Entity.Prize", b =>
                 {
                     b.HasOne("SEAL_Domain.Entity.Event", "Event")
@@ -1355,7 +1492,14 @@ namespace SEAL_Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("SEAL_Domain.Entity.Track", "Track")
+                        .WithMany()
+                        .HasForeignKey("TrackId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.Navigation("Event");
+
+                    b.Navigation("Track");
                 });
 
             modelBuilder.Entity("SEAL_Domain.Entity.Round", b =>

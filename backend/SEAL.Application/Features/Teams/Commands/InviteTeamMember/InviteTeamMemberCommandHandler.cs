@@ -10,6 +10,7 @@ using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
 using SEAL_Domain.Entity.Enums;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Linq;
 using System.Threading;
@@ -31,19 +32,22 @@ namespace SEAL_Application.Features.Teams.Commands.InviteTeamMember
         private readonly IEventRoleChecker _eventRoleChecker;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<InviteTeamMemberCommandHandler> _logger;
 
         public InviteTeamMemberCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEventRoleChecker eventRoleChecker,
             IEmailService emailService,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ILogger<InviteTeamMemberCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
             _emailService = emailService;
             _configuration = configuration;
+            _logger = logger;
         }
 
         public async Task<Result<InviteTeamMemberResponseModel>> Handle(InviteTeamMemberCommand request, CancellationToken cancellationToken)
@@ -160,7 +164,7 @@ namespace SEAL_Application.Features.Teams.Commands.InviteTeamMember
 
                 // Link kích hoạt phải trỏ về trang FE /auth/verify-email (FE sẽ gọi API xác thực),
                 // KHÔNG dùng ApiBaseUrl vì production không cấu hình key này (sẽ ra localhost)
-                var verifyLink = $"{frontendUrl}/auth/verify-email?token={verificationToken}";
+                var verifyLink = $"{frontendUrl}/verify-email?token={verificationToken}";
                 var newUserBody = EmailTemplate.Render(
                     heading: "Kích hoạt tài khoản SEAL",
                     greetingName: tempUser.FullName,
@@ -173,7 +177,7 @@ namespace SEAL_Application.Features.Teams.Commands.InviteTeamMember
                     noteHtml: $"Liên kết kích hoạt và lời mời vào đội đều hết hạn sau {INVITATION_EXPIRY_HOURS} giờ.",
                     showLoginHint: false);
                 try { await _emailService.SendEmailAsync(invitedEmail, $"[SEAL] Kích hoạt tài khoản để tham gia đội {team.Name}", newUserBody); }
-                catch { /* Bỏ qua lỗi SMTP — lời mời vẫn được tạo thành công */ }
+                catch (Exception ex) { _logger.LogWarning(ex, "Gửi email kích hoạt tài khoản tạm thất bại cho {Email}", invitedEmail); }
 
                 return new InviteTeamMemberResponseModel
                 {
@@ -268,7 +272,7 @@ namespace SEAL_Application.Features.Teams.Commands.InviteTeamMember
 
             if (needsActivation)
             {
-                var reactivateLink = $"{frontendUrl}/auth/verify-email?token={invitedUser.EmailVerificationToken}";
+                var reactivateLink = $"{frontendUrl}/verify-email?token={invitedUser.EmailVerificationToken}";
                 var reactivateBody = EmailTemplate.Render(
                     heading: "Kích hoạt tài khoản SEAL",
                     greetingName: invitedUser.FullName,
@@ -281,7 +285,7 @@ namespace SEAL_Application.Features.Teams.Commands.InviteTeamMember
                     noteHtml: $"Liên kết kích hoạt và lời mời vào đội đều hết hạn sau {INVITATION_EXPIRY_HOURS} giờ.",
                     showLoginHint: false);
                 try { await _emailService.SendEmailAsync(invitedUser.Email, $"[SEAL] Kích hoạt tài khoản để tham gia đội {team.Name}", reactivateBody); }
-                catch { /* Bỏ qua lỗi SMTP — lời mời vẫn được tạo thành công */ }
+                catch (Exception ex) { _logger.LogWarning(ex, "Gửi lại email kích hoạt tài khoản tạm thất bại cho {Email}", invitedUser.Email); }
 
                 return new InviteTeamMemberResponseModel
                 {
@@ -295,7 +299,7 @@ namespace SEAL_Application.Features.Teams.Commands.InviteTeamMember
             }
 
             // Gửi email mời tham gia đội (đã có tài khoản)
-            var teamLink = $"{frontendUrl}/teams/{team.Id}";
+            var teamLink = $"{frontendUrl}/my-team";
             var userEmailBody = EmailTemplate.Render(
                 heading: "Lời mời tham gia đội",
                 greetingName: invitedUser.FullName,
@@ -309,7 +313,7 @@ namespace SEAL_Application.Features.Teams.Commands.InviteTeamMember
                 noteHtml: $"Đăng nhập để chấp nhận hoặc từ chối. Lời mời sẽ hết hạn sau {INVITATION_EXPIRY_HOURS} giờ.");
 
             try { await _emailService.SendEmailAsync(invitedUser.Email, $"[SEAL] Lời mời tham gia đội {team.Name}", userEmailBody); }
-            catch { /* Bỏ qua lỗi SMTP — lời mời vẫn được tạo thành công, tránh trả Network Error cho FE */ }
+            catch (Exception ex) { _logger.LogWarning(ex, "Gửi email lời mời vào đội thất bại cho {Email}", invitedUser.Email); }
 
             return new InviteTeamMemberResponseModel
             {

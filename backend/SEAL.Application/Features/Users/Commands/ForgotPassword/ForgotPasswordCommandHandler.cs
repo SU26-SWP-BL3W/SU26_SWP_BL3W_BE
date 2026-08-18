@@ -3,6 +3,8 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using SEAL_Application.Commons;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Entity;
@@ -18,6 +20,7 @@ namespace SEAL_Application.Features.Users.Commands.ForgotPassword
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
         private readonly IMemoryCache _memoryCache;
+        private readonly ILogger<ForgotPasswordCommandHandler> _logger;
 
         // Liên kết đặt lại mật khẩu hết hạn sau 24 giờ (đồng bộ với mọi email khác của hệ thống).
         private const int TOKEN_EXPIRY_HOURS = 24;
@@ -29,12 +32,14 @@ namespace SEAL_Application.Features.Users.Commands.ForgotPassword
             IUnitOfWork unitOfWork,
             IEmailService emailService,
             IConfiguration configuration,
-            IMemoryCache memoryCache)
+            IMemoryCache memoryCache,
+            ILogger<ForgotPasswordCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _emailService = emailService;
             _configuration = configuration;
             _memoryCache = memoryCache;
+            _logger = logger;
         }
 
         public async Task<Result<ForgotPasswordResponseModel>> Handle(ForgotPasswordCommand request, CancellationToken cancellationToken)
@@ -79,20 +84,23 @@ namespace SEAL_Application.Features.Users.Commands.ForgotPassword
             _memoryCache.Set(cooldownKey, true, RequestCooldown);
 
             var frontendUrl = (_configuration["FrontendUrl"] ?? "https://swp391-frontend.vercel.app").TrimEnd('/');
-            var resetLink = $"{frontendUrl}/auth/reset-password?token={resetToken}";
-            var body =
-                $"<h3>Chào {user.FullName},</h3>" +
-                $"<p>Bạn (hoặc ai đó) đã yêu cầu đặt lại mật khẩu cho tài khoản <b>{user.Email}</b>.</p>" +
-                $"<p>Nhấn vào liên kết dưới đây để đặt lại mật khẩu (hết hạn sau {TOKEN_EXPIRY_HOURS} giờ):</p>" +
-                $"<p><a href='{resetLink}'>{resetLink}</a></p>" +
-                $"<p>Nếu bạn không yêu cầu điều này, hãy bỏ qua email — mật khẩu của bạn không thay đổi.</p>";
+            var resetLink = $"{frontendUrl}/reset-password?token={resetToken}";
+            var body = EmailTemplate.Render(
+                heading: "Đặt lại mật khẩu",
+                greetingName: user.FullName,
+                introHtml: $"Bạn (hoặc ai đó) đã yêu cầu đặt lại mật khẩu cho tài khoản <b>{user.Email}</b>.",
+                ctaText: "Đặt lại mật khẩu",
+                ctaUrl: resetLink,
+                showLoginHint: false,
+                noteHtml: $"Liên kết hết hạn sau {TOKEN_EXPIRY_HOURS} giờ. Nếu bạn không yêu cầu điều này, hãy bỏ qua email — mật khẩu của bạn không thay đổi.");
             try
             {
                 await _emailService.SendEmailAsync(user.Email, "[SEAL] Đặt lại mật khẩu", body);
             }
-            catch
+            catch (Exception ex)
             {
-                // Demo: không có SMTP thì bỏ qua lỗi gửi mail (token đã lưu, có thể dùng link trực tiếp).
+                // Không có SMTP thì bỏ qua lỗi gửi mail (token đã lưu, có thể dùng link trực tiếp) — nhưng vẫn log.
+                _logger.LogWarning(ex, "Gửi email đặt lại mật khẩu thất bại cho {Email}", user.Email);
             }
 
             return genericResponse;

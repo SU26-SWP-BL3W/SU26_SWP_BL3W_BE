@@ -43,6 +43,12 @@ namespace SEAL_Infrastructure.Persistence.Configurations
                 .HasForeignKey(sr => sr.RoundId)
                 .IsRequired()
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Chặn race condition ở tầng DB: 2 request tạo bài nộp đồng thời cho cùng
+            // (Team, Track, Round) có thể cùng vượt qua check AnyAsync ở handler trước khi
+            // commit — unique index là lưới an toàn cuối cùng, request thua sẽ nhận lỗi DB.
+            builder.HasIndex(sr => new { sr.TeamId, sr.TrackId, sr.RoundId })
+                .IsUnique();
         }
     }
 }

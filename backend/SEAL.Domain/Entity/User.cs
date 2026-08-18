@@ -26,6 +26,8 @@ namespace SEAL_Domain.Entity
 
         // Tài khoản tạm (dành cho giám khảo được mời chấm theo từng sự kiện)
         public bool IsTemporary { get; set; } = false;
+        // Bắt đổi mật khẩu ngay lần đăng nhập đầu tiên — bật khi cấp mật khẩu tạm, tắt sau khi đổi thành công
+        public bool MustChangePassword { get; set; } = false;
         // Navigation Properties
         public virtual School? School { get; set; }
         public virtual ICollection<UserRejection> UserRejections { get; set; } = new List<UserRejection>();

@@ -9,6 +9,7 @@ using SEAL_Application.Interfaces;
 using SEAL_Application.Features.Users.Commands.CreateUser.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -28,16 +29,19 @@ namespace SEAL_Application.Features.Users.Commands.RegisterUser
         private readonly string? _fptMockBaseUrl;
         private readonly string? _fptMockApiKey;
         private readonly string _frontendUrl;
+        private readonly ILogger<RegisterUserCommandHandler> _logger;
 
         public RegisterUserCommandHandler(
-            IUnitOfWork unitOfWork, 
-            IHttpClientFactory httpClientFactory, 
+            IUnitOfWork unitOfWork,
+            IHttpClientFactory httpClientFactory,
             IConfiguration configuration,
-            IEmailService emailService)
+            IEmailService emailService,
+            ILogger<RegisterUserCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _httpClientFactory = httpClientFactory;
             _emailService = emailService;
+            _logger = logger;
             _fptMockBaseUrl = configuration["FptMockApi:BaseUrl"];
             _fptMockApiKey = configuration["FptMockApi:ApiKey"];
             _frontendUrl = (configuration["FrontendUrl"] ?? "http://localhost:3000").TrimEnd('/');
@@ -101,7 +105,7 @@ namespace SEAL_Application.Features.Users.Commands.RegisterUser
             // 5. Gửi email xác thực
             // Link kích hoạt phải trỏ về trang FE /auth/verify-email (FE sẽ gọi API xác thực),
             // KHÔNG dùng ApiBaseUrl vì production không cấu hình key này (sẽ ra localhost)
-            var verificationLink = $"{_frontendUrl}/auth/verify-email?token={emailVerificationToken}";
+            var verificationLink = $"{_frontendUrl}/verify-email?token={emailVerificationToken}";
             var emailBody = EmailTemplate.Render(
                 heading: "Kích hoạt tài khoản SEAL",
                 greetingName: user.FullName,
@@ -114,7 +118,12 @@ namespace SEAL_Application.Features.Users.Commands.RegisterUser
                 noteHtml: $"Liên kết kích hoạt sẽ hết hạn sau {ACTIVATION_EXPIRY_HOURS} giờ.",
                 showLoginHint: false);
 
-            await _emailService.SendEmailAsync(user.Email, "[SEAL] Kích hoạt tài khoản đăng ký", emailBody);
+            // Bọc try/catch giống mọi luồng gửi email khác trong dự án — SMTP lỗi/chưa cấu hình không
+            // được làm hỏng đăng ký: User đã lưu DB ở bước trên, thiếu try/catch ở đây sẽ làm cả API
+            // trả 500 dù tài khoản đã tạo thành công, kẹt người dùng ở trạng thái không đăng ký lại được
+            // (trùng email) mà cũng không có token xác thực (nằm trong email chưa từng gửi được).
+            try { await _emailService.SendEmailAsync(user.Email, "[SEAL] Kích hoạt tài khoản đăng ký", emailBody); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Gửi email kích hoạt đăng ký thất bại cho {Email}", user.Email); }
 
             return new UserModel
             {

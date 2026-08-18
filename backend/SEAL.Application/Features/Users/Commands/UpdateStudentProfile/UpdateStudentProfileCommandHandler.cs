@@ -1,8 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using SEAL_Application.Commons;
-using SEAL_Application.Features.Users.Commands.CreateUser.Models;
 using SEAL_Application.Features.Users.Models;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
@@ -12,8 +10,6 @@ using SEAL_Domain.Entity.Enums;
 using SEAL_Domain.Ultis;
 using System;
 using System.Linq;
-using System.Net.Http;
-using System.Net.Http.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -23,21 +19,13 @@ namespace SEAL_Application.Features.Users.Commands.UpdateStudentProfile
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
-        private readonly IHttpClientFactory _httpClientFactory;
-        private readonly string? _fptMockBaseUrl;
-        private readonly string? _fptMockApiKey;
 
         public UpdateStudentProfileCommandHandler(
             IUnitOfWork unitOfWork,
-            ICurrentUserService currentUserService,
-            IHttpClientFactory httpClientFactory,
-            IConfiguration configuration)
+            ICurrentUserService currentUserService)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
-            _httpClientFactory = httpClientFactory;
-            _fptMockBaseUrl = configuration["FptMockApi:BaseUrl"];
-            _fptMockApiKey = configuration["FptMockApi:ApiKey"];
         }
 
         public async Task<Result<UserModel>> Handle(UpdateStudentProfileCommand request, CancellationToken cancellationToken)
@@ -76,7 +64,10 @@ namespace SEAL_Application.Features.Users.Commands.UpdateStudentProfile
 
             string fullName = user.FullName;
 
-            // 2. Nếu là sinh viên FPT, xác thực qua FPT Mock API
+            // 2. Nếu là sinh viên FPT, xác thực qua bảng FptStudents thật trong DB
+            //    (trước đây gọi ra "https://localhost:7087/api/Students/..." — địa chỉ chưa
+            //    từng tồn tại, luôn fail, khiến sinh viên FPT KHÔNG BAO GIỜ nộp hồ sơ thành
+            //    công được. Nay đọc thẳng cùng bảng mà endpoint xác thực preview đang dùng.)
             if (request.IsFpt)
             {
                 if (string.IsNullOrEmpty(request.StudentCode))
@@ -84,52 +75,20 @@ namespace SEAL_Application.Features.Users.Commands.UpdateStudentProfile
                     return BaseException.BadRequestResponse("Mã sinh viên là bắt buộc đối với sinh viên FPT University.");
                 }
 
-                var httpClient = _httpClientFactory.CreateClient();
-                httpClient.DefaultRequestHeaders.Clear();
-                // Chỉ thêm header khi có API key (tránh ArgumentException khi key null)
-                if (!string.IsNullOrEmpty(_fptMockApiKey))
+                var fptStudent = await _unitOfWork.GetRepository<FptStudent>().Entities
+                    .FirstOrDefaultAsync(s => s.StudentCode.ToLower() == request.StudentCode.ToLower(), cancellationToken);
+
+                if (fptStudent == null || !string.Equals(fptStudent.Status, "ACTIVE", StringComparison.OrdinalIgnoreCase))
                 {
-                    httpClient.DefaultRequestHeaders.Add("X-API-KEY", _fptMockApiKey);
+                    return BaseException.BadRequestResponse("Mã sinh viên không hợp lệ hoặc không thuộc FPT University.");
                 }
 
-                FptStudentResponse? fptResponse;
-                try
-                {
-                    fptResponse = await httpClient.GetFromJsonAsync<FptStudentResponse>(
-                        $"{_fptMockBaseUrl}/api/Students/{request.StudentCode}",
-                        cancellationToken
-                    );
-                }
-                catch (HttpRequestException)
-                {
-                    // Hệ thống xác thực SV FPT không gọi được (chưa bật / sập / sai URL)
-                    // -> trả lỗi rõ ràng thay vì 500 "An unexpected error occurred".
-                    return BaseException.BadRequestResponse(
-                        "Chưa kết nối được hệ thống xác thực sinh viên FPT. Vui lòng thử lại sau hoặc liên hệ ban tổ chức.");
-                }
-                catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
-                {
-                    // Timeout khi gọi API FPT (không phải do client tự hủy request)
-                    return BaseException.BadRequestResponse(
-                        "Hệ thống xác thực sinh viên FPT phản hồi quá lâu. Vui lòng thử lại sau.");
-                }
-
-                if (fptResponse == null || !fptResponse.IsValid)
-                {
-                    return BaseException.BadRequestResponse(
-                        fptResponse?.Message ?? "Mã sinh viên không hợp lệ hoặc không thuộc FPT University."
-                    );
-                }
-
-                var apiEmail = fptResponse.Data?.Email;
-                var apiFullName = fptResponse.Data?.FullName;
-
-                if (NormalizeString(user.Email) != NormalizeString(apiEmail))
+                if (NormalizeString(user.Email) != NormalizeString(fptStudent.Email))
                 {
                     return BaseException.BadRequestResponse("Email tài khoản không khớp với thông tin sinh viên tại FPT University.");
                 }
 
-                fullName = apiFullName ?? fullName;
+                fullName = fptStudent.FullName;
             }
             else
             {

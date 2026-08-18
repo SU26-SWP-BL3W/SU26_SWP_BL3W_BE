@@ -16,15 +16,18 @@ namespace SEAL_Application.Features.EventRoles.Commands.RespondEventRoleInvitati
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
+        private readonly INotificationService _notifications;
 
         public RespondEventRoleInvitationCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
-            IEventRoleChecker eventRoleChecker)
+            IEventRoleChecker eventRoleChecker,
+            INotificationService notifications)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
+            _notifications = notifications;
         }
 
         public async Task<Result<RespondEventRoleInvitationResponseModel>> Handle(RespondEventRoleInvitationCommand request, CancellationToken cancellationToken)
@@ -72,6 +75,18 @@ namespace SEAL_Application.Features.EventRoles.Commands.RespondEventRoleInvitati
                 invitation.Status = EventRoleInvitationStatus.Rejected;
                 invitation.RespondedAt = now;
                 await _unitOfWork.GetRepository<EventRoleInvitation>().UpdateAsync(invitation);
+
+                if (!string.IsNullOrEmpty(invitation.InvitedByUserId))
+                {
+                    await _notifications.NotifyAsync(
+                        invitation.InvitedByUserId,
+                        "Lời mời vai trò bị từ chối",
+                        $"Một lời mời đảm nhận vai trò {invitation.RoleName} đã bị từ chối.",
+                        "warning",
+                        "/coordinator/staff",
+                        cancellationToken);
+                }
+
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 return new RespondEventRoleInvitationResponseModel
@@ -164,6 +179,18 @@ namespace SEAL_Application.Features.EventRoles.Commands.RespondEventRoleInvitati
 
             // Xóa cache phân quyền để vai trò mới có hiệu lực ngay lập tức
             _eventRoleChecker.InvalidateCache(currentUserId, invitation.EventId);
+
+            if (!string.IsNullOrEmpty(invitation.InvitedByUserId))
+            {
+                await _notifications.NotifyAsync(
+                    invitation.InvitedByUserId,
+                    "Lời mời vai trò đã được chấp nhận",
+                    $"Lời mời đảm nhận vai trò {invitation.RoleName} đã được chấp nhận.",
+                    "success",
+                    "/coordinator/staff",
+                    cancellationToken);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
 
             return new RespondEventRoleInvitationResponseModel
             {

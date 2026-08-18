@@ -1,6 +1,7 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using SEAL_Application.Commons;
 using SEAL_Application.Features.EventRoles;
 using SEAL_Application.Features.Mentors.Commands.InviteMentorToTrack.Models;
@@ -29,17 +30,23 @@ namespace SEAL_Application.Features.Mentors.Commands.InviteMentorToTrack
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly IEmailService _emailService;
+        private readonly INotificationService _notificationService;
+        private readonly ILogger<InviteMentorToTrackCommandHandler> _logger;
         private readonly string _frontendUrl;
 
         public InviteMentorToTrackCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEmailService emailService,
+            INotificationService notificationService,
+            ILogger<InviteMentorToTrackCommandHandler> logger,
             IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _emailService = emailService;
+            _notificationService = notificationService;
+            _logger = logger;
             _frontendUrl = (configuration["FrontendUrl"] ?? "http://localhost:3000").TrimEnd('/');
         }
 
@@ -74,7 +81,7 @@ namespace SEAL_Application.Features.Mentors.Commands.InviteMentorToTrack
                 {
                     Email = email,
                     SchoolId = null,   // BẮT BUỘC: mặc định entity là "" -> vi phạm FK_Users_Schools_SchoolId
-                    FullName = email.Split('@')[0],
+                    FullName = !string.IsNullOrWhiteSpace(m.MentorFullName) ? m.MentorFullName.Trim() : email.Split('@')[0],
                     IsTemporary = true,
                     EmailVerificationToken = verificationToken,
                     EmailVerificationExpiry = DateTime.UtcNow.AddHours(ACTIVATION_EXPIRY_HOURS)
@@ -84,7 +91,7 @@ namespace SEAL_Application.Features.Mentors.Commands.InviteMentorToTrack
 
                 // Link kích hoạt phải trỏ về trang FE /auth/verify-email (FE sẽ gọi API xác thực),
                 // KHÔNG dùng ApiBaseUrl vì production không cấu hình key này (sẽ ra localhost)
-                var verificationLink = $"{_frontendUrl}/auth/verify-email?token={verificationToken}";
+                var verificationLink = $"{_frontendUrl}/verify-email?token={verificationToken}";
                 var verifyBody = EmailTemplate.Render(
                     heading: "Kích hoạt tài khoản SEAL",
                     greetingName: invitedUser.FullName,
@@ -97,7 +104,7 @@ namespace SEAL_Application.Features.Mentors.Commands.InviteMentorToTrack
                     noteHtml: $"Liên kết kích hoạt sẽ hết hạn sau {ACTIVATION_EXPIRY_HOURS} giờ.",
                     showLoginHint: false);
                 try { await _emailService.SendEmailAsync(invitedUser.Email, "[SEAL] Kích hoạt tài khoản để tham gia hướng dẫn", verifyBody); }
-                catch { /* Bỏ qua lỗi gửi mail khi không có SMTP */ }
+                catch (Exception ex) { _logger.LogWarning(ex, "Gửi email kích hoạt tài khoản tạm thất bại cho {Email}", invitedUser.Email); }
             }
 
             // 4. Kiểm tra xung đột vai trò qua EventRoleValidationHelper (đồng bộ với Assign/Update):
@@ -148,8 +155,11 @@ namespace SEAL_Application.Features.Mentors.Commands.InviteMentorToTrack
 
             // 7. Gửi email kèm 2 nút Đồng ý / Từ chối
             bool invitationEmailSent = true;
-            var acceptLink = $"{_frontendUrl}/invitations/{invitation.Id}?action=accept";
-            var declineLink = $"{_frontendUrl}/invitations/{invitation.Id}?action=decline";
+            // Không dùng link accept/decline trực tiếp (GET link tự đổi state rất dễ bị prefetch/quét
+            // bởi email scanner làm chấp nhận/từ chối nhầm) — trỏ về trang "Lời mời của tôi" (đã có sẵn,
+            // xử lý được cả EventRole lẫn Team invitation) để người dùng tự bấm sau khi đăng nhập.
+            var acceptLink = $"{_frontendUrl}/my-invitations";
+            var declineLink = $"{_frontendUrl}/my-invitations";
             var subject = $"[SEAL] Mời hướng dẫn hạng mục '{track.TrackName}'";
             var body = EmailTemplate.Render(
                 heading: "Lời mời làm Mentor",
@@ -162,16 +172,29 @@ namespace SEAL_Application.Features.Mentors.Commands.InviteMentorToTrack
                 ctaUrl: acceptLink,
                 ctaText2: "Từ chối",
                 ctaUrl2: declineLink,
-                ctaFallbackUrl: $"{_frontendUrl}/invitations/{invitation.Id}",
+                ctaFallbackUrl: $"{_frontendUrl}/my-invitations",
                 noteHtml: $"Lời mời sẽ hết hạn sau {INVITATION_EXPIRY_HOURS} giờ. Nếu bạn không chấp nhận, vai trò sẽ không được tạo.");
             try
             {
                 await _emailService.SendEmailAsync(invitedUser.Email, subject, body);
             }
-            catch
+            catch (Exception ex)
             {
                 invitationEmailSent = false;
+                _logger.LogWarning(ex, "Gửi email lời mời Cố vấn thất bại cho {Email}", invitedUser.Email);
             }
+
+            // 8. Thông báo trong hệ thống cho người được mời (song song với email, không phụ thuộc email có gửi được không)
+            await _notificationService.NotifyAsync(
+                invitedUser.Id,
+                "Lời mời làm Cố vấn",
+                $"Bạn được mời làm Cố vấn hướng dẫn hạng mục '{track.TrackName}' trong sự kiện '{ev.EventName}'.",
+                "staff_invite",
+                $"/invitations/{invitation.Id}",
+                cancellationToken);
+            // NotifyAsync chỉ Add vào tracker, KHÔNG tự SaveChanges (unit-of-work dùng chung) — thiếu dòng
+            // này thì notification bị bỏ quên, không bao giờ ghi xuống DB dù request vẫn trả 200 bình thường.
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return new InviteMentorToTrackResponseModel
             {

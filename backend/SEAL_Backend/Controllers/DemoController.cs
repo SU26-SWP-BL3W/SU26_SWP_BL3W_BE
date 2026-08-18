@@ -52,5 +52,22 @@ namespace SEAL_Backend.Controllers
             var result = await _mediator.Send(new SetupDemoAppealEventCommand { TargetDate = targetDate });
             return OkResponse(result);
         }
+
+        /// <summary>
+        /// Tạo trọn vẹn 1 Sự Kiện Hackathon chuẩn quốc tế từ A-Z với đầy đủ 100% các thực thể:
+        /// Sự kiện, Giải thưởng, Mẫu tiêu chí & Trọng số, Vòng thi & Hạng mục, Tài khoản BTC/Giám khảo/Cố vấn/25 Thí sinh (5 Đội), 
+        /// Bài nộp, Nhận xét Mentor, Bảng điểm chi tiết 4 tiêu chí, Xếp hạng kết quả, Phúc khảo và Thông báo hệ thống.
+        /// </summary>
+        /// <param name="targetDate">Ngày mốc diễn ra sự kiện (mặc định lấy thời điểm hiện tại)</param>
+        [HttpPost("setup-full-event-demo")]
+        [ProducesResponseType(typeof(BaseResponse<object>), 200)]
+        public async Task<IActionResult> SetupFullEventDemo([FromQuery] DateTime? targetDate = null)
+        {
+            var result = await _mediator.Send(new SEAL_Application.Features.Demo.Commands.SetupFullEventDemo.SetupFullEventDemoCommand 
+            { 
+                TargetDate = targetDate ?? DateTime.UtcNow 
+            });
+            return OkResponse(result);
+        }
     }
 }

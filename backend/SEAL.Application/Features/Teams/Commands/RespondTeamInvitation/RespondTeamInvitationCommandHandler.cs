@@ -149,6 +149,19 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
                 invitation.RespondedAt = now;
                 await _unitOfWork.GetRepository<TeamInvitation>().UpdateAsync(invitation);
 
+                // Báo cho Trưởng nhóm CŨ là chuyển quyền đã hoàn tất — trước giờ hoán vai xong không ai
+                // được báo cả, chỉ tự nhận ra khi thấy quyền của mình đổi.
+                if (oldLeaderRole?.UserId != null)
+                {
+                    await _notifications.NotifyAsync(
+                        oldLeaderRole.UserId,
+                        "Đã chuyển quyền Trưởng nhóm",
+                        $"Bạn đã chuyển quyền Trưởng nhóm {transferTeam.Name} thành công.",
+                        "info",
+                        "/my-team",
+                        cancellationToken);
+                }
+
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
 
                 // Xoá cache phân quyền 2 người vừa đổi vai (leader mới thao tác được ngay)

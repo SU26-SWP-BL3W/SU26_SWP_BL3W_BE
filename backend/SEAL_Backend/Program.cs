@@ -15,6 +15,14 @@ using SEAL_Infrastructure.Persistence.Seeding;
 using SEAL_Infrastructure.Services;
 using SEAL_Infrastructure.UnitOfWork;
 
+// Neu chua ai set ASPNETCORE_ENVIRONMENT (vd chay "dotnet run --no-launch-profile"), .NET mac dinh
+// roi vao Production -> vo tinh noi nham DB that tren Render thay vi DB local. Render luon tu set bien
+// nay khi deploy nen fallback duoi day KHONG anh huong production, chi bao ve may local.
+if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT")))
+{
+    Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -101,7 +109,11 @@ builder.Services.AddCors(options =>
     });
 });
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -153,7 +165,15 @@ using (var scope = app.Services.CreateScope())
 app.UseMiddleware<GlobalExceptionMiddleware>();
 app.UseSwagger();
 app.UseSwaggerUI();
-app.UseHttpsRedirection();
+// FE local (.env.local: NEXT_PUBLIC_API_URL=http://localhost:5138/api) luon goi HTTP,
+// khong bao gio HTTPS. Redirect sang https://localhost:7153 chi hai: neu chi bind HTTP
+// (vd chay bang "dotnet run --urls http://...") request treo/loi ket noi; con khi ca 2
+// cong deu bind thi trinh duyet co the chua tin cay chung chi dev tu ky, van fail. Production
+// dung domain Render rieng qua HTTPS that, khong phu thuoc middleware nay.
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+}
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();

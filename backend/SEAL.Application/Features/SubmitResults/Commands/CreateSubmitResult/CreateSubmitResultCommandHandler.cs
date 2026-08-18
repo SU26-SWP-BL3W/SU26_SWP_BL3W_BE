@@ -178,7 +178,18 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
             };
 
             await _unitOfWork.GetRepository<SubmitResult>().AddAsync(submitResult);
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            try
+            {
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
+            catch (DbUpdateException)
+            {
+                // Lưới an toàn cuối: 2 request cùng vượt qua check trùng ở trên do race condition,
+                // unique index (TeamId, TrackId, RoundId) ở DB sẽ chặn request thua — trả lỗi thân thiện
+                // thay vì để lộ 500 exception thô.
+                return BaseException.BadRequestDupplicationResponse(
+                    "Đội đã nộp bài cho hạng mục và vòng thi này rồi.");
+            }
 
             return new CreateSubmitResultResponseModel
             {

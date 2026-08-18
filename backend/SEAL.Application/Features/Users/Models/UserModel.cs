@@ -19,6 +19,7 @@ namespace SEAL_Application.Features.Users.Models
         /// FE dùng để phân biệt: badge "Được mời" thay vì "Chờ duyệt" và ẩn nút Duyệt/Từ chối.
         /// </summary>
         public bool IsTemporary { get; set; }
+        public bool MustChangePassword { get; set; }
         public string? PhotoStudentCardUrl { get; set; }
     }
 }

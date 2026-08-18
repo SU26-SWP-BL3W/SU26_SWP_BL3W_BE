@@ -2,6 +2,8 @@
 
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using SEAL_Application.Commons;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
@@ -22,14 +24,17 @@ namespace SEAL_Application.Features.Teams.Commands.DisqualifyTeam
         private readonly IEventRoleChecker _eventRoleChecker;
         private readonly IEmailService _emailService;
         private readonly IAuditLogService _auditLogService;
+        private readonly ILogger<DisqualifyTeamCommandHandler> _logger;
 
         public DisqualifyTeamCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEventRoleChecker eventRoleChecker,
             IEmailService emailService,
-            IAuditLogService auditLogService)
+            IAuditLogService auditLogService,
+            ILogger<DisqualifyTeamCommandHandler> logger)
         {
+            _logger = logger;
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
@@ -82,6 +87,17 @@ namespace SEAL_Application.Features.Teams.Commands.DisqualifyTeam
                 await _unitOfWork.GetRepository<FinalResult>().DeleteRangeAsync(draftResults);
             }
 
+            // Vô hiệu (không xóa) bài nộp của đội bị loại — giữ lại để đối chiếu/kiểm tra sau này,
+            // nhưng không còn tính là bài nộp đang hoạt động (đúng ý nghĩa cờ IsActive đã có sẵn).
+            var submissions = await _unitOfWork.GetRepository<SubmitResult>().Entities
+                .Where(sr => sr.TeamId == team.Id && sr.IsActive)
+                .ToListAsync(cancellationToken);
+            foreach (var submission in submissions)
+            {
+                submission.IsActive = false;
+                await _unitOfWork.GetRepository<SubmitResult>().UpdateAsync(submission);
+            }
+
             await _auditLogService.AppendAsync(
                 AuditActions.DisqualifyTeam,
                 AuditEntityTypes.Team,
@@ -102,12 +118,16 @@ namespace SEAL_Application.Features.Teams.Commands.DisqualifyTeam
             foreach (var leader in leaders)
             {
                 if (leader == null || string.IsNullOrEmpty(leader.Email)) continue;
-                var body =
-                    $"<h3>Chào {leader.FullName},</h3>" +
-                    $"<p>Đội <b>{team.Name}</b> trong <b>{eventName}</b> đã bị <b>LOẠI</b> khỏi cuộc thi.</p>" +
-                    $"<p><b>Lý do:</b> {reasonHtml}</p>";
+                var body = EmailTemplate.Render(
+                    heading: "Đội thi đã bị loại",
+                    greetingName: leader.FullName,
+                    introHtml: $"Đội <b>{team.Name}</b> trong <b>{eventName}</b> đã bị <b>LOẠI</b> khỏi cuộc thi.",
+                    calloutLabel: "Lý do",
+                    calloutHtml: reasonHtml,
+                    calloutKind: EmailTemplate.Callout.Danger,
+                    showLoginHint: false);
                 try { await _emailService.SendEmailAsync(leader.Email, $"[SEAL] Đội {team.Name} bị loại", body); }
-                catch { /* SMTP không chặn nghiệp vụ loại đội */ }
+                catch (Exception ex) { _logger.LogWarning(ex, "Gửi email loại đội thất bại cho {Email}", leader.Email); }
             }
 
             return true;

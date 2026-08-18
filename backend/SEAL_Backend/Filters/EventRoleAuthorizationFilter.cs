@@ -136,6 +136,13 @@ namespace SEAL_Backend.Filters
                     eventId = resolved.EventId;
                     if (string.IsNullOrEmpty(teamId)) teamId = tId;
                 }
+                // teamId da duoc lay tu query string o buoc 2.2 (vd GET /SubmitResults?teamId=...)
+                // nhung nhanh tren chi doc RouteData nen bo sot -> luon 400 "EventId is required".
+                else if (!string.IsNullOrEmpty(teamId))
+                {
+                    var resolved = await _metadataResolver.ResolveFromEntityAsync("Teams", teamId);
+                    eventId = resolved.EventId;
+                }
             }
 
             // 3. If EventId is still missing, fail

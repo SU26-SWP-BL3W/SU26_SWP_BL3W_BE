@@ -41,6 +41,8 @@ namespace SEAL_Infrastructure.Persistence
         public DbSet<Prize> Prizes { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<AppNotification> AppNotifications { get; set; }
+        public DbSet<MentorFeedback> MentorFeedbacks { get; set; }
+        public DbSet<FptStudent> FptStudents { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
