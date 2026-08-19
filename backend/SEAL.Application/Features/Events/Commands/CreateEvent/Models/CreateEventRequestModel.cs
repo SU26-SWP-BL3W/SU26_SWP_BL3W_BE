@@ -17,7 +17,7 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent.Models
         public string? PhotoEventUrl { get; set; }
         public int MaxTeams { get; set; }
 
-        public List<RoundRequestDto> Rounds { get; set; } = new List<RoundRequestDto>();
+        public List<RoundRequestDto>? Rounds { get; set; } = new List<RoundRequestDto>();
     }
 
     public class RoundRequestDto
