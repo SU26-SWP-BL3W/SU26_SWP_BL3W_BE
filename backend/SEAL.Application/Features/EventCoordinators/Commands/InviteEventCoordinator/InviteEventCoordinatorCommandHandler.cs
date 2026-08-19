@@ -64,7 +64,6 @@ namespace SEAL_Application.Features.EventCoordinators.Commands.InviteEventCoordi
 
             // 2. Người được mời: nếu CHƯA có tài khoản thì tạo tài khoản TẠM (IsTemporary) + gửi email xác thực
             //    (thay vì báo lỗi). Đã có tài khoản thì dùng luôn.
-            bool activationEmailSent = false;
             var invitedUser = await _unitOfWork.GetRepository<User>().GetQueryable()
                 .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower(), cancellationToken);
             if (invitedUser == null)
@@ -96,11 +95,7 @@ namespace SEAL_Application.Features.EventCoordinators.Commands.InviteEventCoordi
                     ctaUrl: verificationLink,
                     noteHtml: $"Liên kết kích hoạt sẽ hết hạn sau {ACTIVATION_EXPIRY_HOURS} giờ.",
                     showLoginHint: false);
-                try
-                {
-                    await _emailService.SendEmailAsync(invitedUser.Email, "[SEAL] Kích hoạt tài khoản để tham gia Ban tổ chức", verifyBody);
-                    activationEmailSent = true;
-                }
+                try { await _emailService.SendEmailAsync(invitedUser.Email, "[SEAL] Kích hoạt tài khoản để tham gia Ban tổ chức", verifyBody); }
                 catch (Exception ex) { _logger.LogWarning(ex, "Gửi email kích hoạt tài khoản tạm thất bại cho {Email}", invitedUser.Email); }
             }
 
@@ -202,8 +197,7 @@ namespace SEAL_Application.Features.EventCoordinators.Commands.InviteEventCoordi
                 EventId = m.EventId,
                 Status = invitation.Status.ToString(),
                 ExpiresAt = invitation.ExpiresAt,
-                InvitationEmailSent = invitationEmailSent,
-                ActivationEmailSent = activationEmailSent
+                InvitationEmailSent = invitationEmailSent
             };
         }
     }
