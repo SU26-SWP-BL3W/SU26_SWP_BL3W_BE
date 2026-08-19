@@ -65,11 +65,6 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent
                 .GreaterThan(0).WithMessage("Số đội tối đa phải lớn hơn 0")
                 .When(x => x.Model != null);
 
-            // Ràng buộc danh sách Vòng thi (Rounds)
-            RuleFor(x => x.Model.Rounds)
-                .NotEmpty().WithMessage("Sự kiện phải cấu hình ít nhất một vòng thi (Round).")
-                .When(x => x.Model != null);
-
             // Validate ngày của Round so với Event ở mức Validator cha (tránh lỗi DI)
             RuleForEach(x => x.Model.Rounds)
                 .Must((command, round) => round.StartDate < round.EndDate)
@@ -82,7 +77,7 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent
                 .WithMessage((command, round) => $"Vòng '{round.RoundName}': Thời gian bắt đầu chấm không được vượt quá ngày kết thúc sự kiện (đến {command.Model.EndDate:dd/MM/yyyy}).")
                 .Must((command, round) => !round.ScoringEndDate.HasValue || round.ScoringEndDate.Value <= command.Model.EndDate)
                 .WithMessage((command, round) => $"Vòng '{round.RoundName}': Hạn chấm không được vượt quá ngày kết thúc sự kiện (đến {command.Model.EndDate:dd/MM/yyyy}).")
-                .When(x => x.Model != null && x.Model.Rounds != null);
+                .When(x => x.Model != null && x.Model.Rounds != null && x.Model.Rounds.Any());
 
             // Validate Track dates against Event dates
             RuleFor(x => x.Model)
@@ -156,7 +151,7 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent
 
             RuleForEach(x => x.Model.Rounds)
                 .SetValidator(new RoundRequestDtoValidator(_unitOfWork))
-                .When(x => x.Model != null && x.Model.Rounds != null);
+                .When(x => x.Model != null && x.Model.Rounds != null && x.Model.Rounds.Any());
         }
     }
 

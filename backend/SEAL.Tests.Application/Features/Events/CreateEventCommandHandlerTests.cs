@@ -80,5 +80,41 @@ namespace SEAL.Tests.Application.Features.Events
             result.StatusCode.Should().Be(400);
             result.Error?.ErrorCode.Should().Be(SEAL_Domain.Store.Constants.ResponseCodeConstants.DUPLICATE);
         }
+
+        [Fact]
+        public async Task Handle_WhenCreatingEventWithoutRounds_ShouldSucceed()
+        {
+            // Arrange
+            _mockCurrentUserService.Setup(s => s.UserId).Returns("user1");
+            _mockUserRepo.Setup(r => r.GetByIdAsync("user1")).ReturnsAsync(new User { Id = "user1", IsAdmin = true });
+
+            var mockEventRoleRepo = new Mock<IGenericRepository<EventRole>>();
+            _mockUnitOfWork.Setup(u => u.GetRepository<EventRole>()).Returns(mockEventRoleRepo.Object);
+
+            var existingEvents = new List<Event>();
+            _mockEventRepo.Setup(r => r.Entities).Returns(MockQueryableHelper.GetMockIQueryable(existingEvents).Object);
+
+            var command = new CreateEventCommand
+            {
+                Model = new CreateEventRequestModel
+                {
+                    EventName = "Event Without Rounds",
+                    Year = 2026,
+                    StartDate = DateTime.UtcNow.AddDays(1),
+                    EndDate = DateTime.UtcNow.AddDays(10),
+                    Rounds = new List<RoundRequestDto>() // No rounds configured
+                }
+            };
+
+            // Act
+            var result = await _handler.Handle(command, CancellationToken.None);
+
+            // Assert
+            result.IsSuccess.Should().BeTrue();
+            result.Value.Should().NotBeNull();
+            result.Value.EventName.Should().Be("Event Without Rounds");
+            result.Value.Rounds.Should().BeEmpty();
+            _mockEventRepo.Verify(r => r.AddAsync(It.IsAny<Event>()), Times.Once);
+        }
     }
 }

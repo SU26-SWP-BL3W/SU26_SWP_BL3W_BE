@@ -51,8 +51,8 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent
             try
             {
                 // 1. Kiểm tra Template Weight
-                var templateIds = request.Model.Rounds
-                    .SelectMany(r => r.Tracks)
+                var templateIds = (request.Model.Rounds ?? new List<RoundRequestDto>())
+                    .SelectMany(r => r.Tracks ?? new List<TrackRequestDto>())
                     .Select(t => t.TemplateId)
                     .Where(id => !string.IsNullOrEmpty(id))
                     .Distinct()
@@ -115,9 +115,11 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent
 
                 var roundResponses = new List<RoundResponseDto>();
 
-                // 3. Xử lý các Rounds, Tracks, Judges, Mentors lồng nhau
-                foreach (var roundDto in request.Model.Rounds)
+                // 3. Xử lý các Rounds, Tracks, Judges, Mentors lồng nhau (nếu có)
+                if (request.Model.Rounds != null && request.Model.Rounds.Any())
                 {
+                    foreach (var roundDto in request.Model.Rounds)
+                    {
                     var roundId = Guid.NewGuid().ToString();
                     var roundEntity = new Round
                     {
@@ -181,6 +183,7 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent
                         ScoringEndDate = roundEntity.ScoringEndDate,
                         Tracks = trackResponses
                     });
+                }
                 }
 
                 // Batch insert cho các thực thể phụ
