@@ -88,6 +88,21 @@ Tất cả các API ngoại trừ file stream/download đều bọc kết quả 
 ```
 - **Response `200 OK`**: Trả về `UserModel` (Tài khoản vừa tạo, ở trạng thái chờ xác thực email).
 
+### 2.1.1 Gửi lại email xác thực (Resend Email Verification)
+- **Endpoint**: `POST /api/Auth/resend-verification`
+- **Auth**: `AllowAnonymous`
+- **Mục đích**: Gửi lại liên kết kích hoạt tài khoản (khi người dùng chưa verify email hoặc link đã hết hạn).
+- **Request Body**:
+```json
+{
+  "email": "student@fpt.edu.vn"
+}
+```
+- **Response `200 OK`**: `data` là `true`.
+  - Nếu email không tồn tại hoặc đã được verify, API vẫn trả `200` để tránh lộ thông tin người dùng (anti-enumeration).
+- **Response `500 Internal Server Error`**: Gửi email thất bại (thường do thiếu/chưa cấu hình SMTP).
+  - Dev Note: khi chạy local/dev có thể dùng `EmailSettings:OutboxPath` để ghi mail ra file HTML thay vì gửi SMTP thật.
+
 ### 2.2 Đăng nhập bằng Email & Password
 - **Endpoint**: `POST /api/Auth/login`
 - **Auth**: `AllowAnonymous`

@@ -64,8 +64,19 @@ namespace SEAL_Application.Features.Users.Commands.ResendEmailVerification
                 noteHtml: $"Liên kết sẽ hết hạn sau {ACTIVATION_EXPIRY_HOURS} giờ.",
                 showLoginHint: false);
 
-            try { await _emailService.SendEmailAsync(user.Email, "[SEAL] Gửi lại kích hoạt tài khoản", emailBody); }
-            catch (Exception ex) { _logger.LogWarning(ex, "Gửi lại email kích hoạt thất bại cho {Email}", user.Email); }
+            try
+            {
+                await _emailService.SendEmailAsync(user.Email, "[SEAL] Gửi lại kích hoạt tài khoản", emailBody);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Resend activation email failed for {Email}", user.Email);
+                throw new BaseException.ErrorException(
+                    500,
+                    "EMAIL_SEND_FAILED",
+                    "Không gửi được email xác thực (resend). Vui lòng thử lại sau."
+                );
+            }
 
             return true;
         }

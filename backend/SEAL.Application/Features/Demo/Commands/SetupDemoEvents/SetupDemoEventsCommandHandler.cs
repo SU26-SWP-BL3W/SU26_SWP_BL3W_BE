@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using SEAL_Domain.Base;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Entity;
@@ -15,16 +16,22 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
     public class SetupDemoEventsCommandHandler : IRequestHandler<SetupDemoEventsCommand, Result<BaseResponse<bool>>>
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IConfiguration _configuration;
 
-        public SetupDemoEventsCommandHandler(IUnitOfWork unitOfWork)
+        public SetupDemoEventsCommandHandler(IUnitOfWork unitOfWork, IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
+            _configuration = configuration;
         }
 
         public async Task<Result<BaseResponse<bool>>> Handle(SetupDemoEventsCommand request, CancellationToken cancellationToken)
         {
             // Reset thời gian về UTC chuẩn
             var targetDate = request.TargetDate.ToUniversalTime();
+
+            // Demo seeding config (tránh hard-code trực tiếp trong logic tạo demo)
+            var mentorEmail = _configuration.GetValue<string>("DemoSeed:MentorEmail") ?? "mentor.ai@seal.edu.vn";
+            var targetTrackName = _configuration.GetValue<string>("DemoSeed:TargetTrackName") ?? "Phần mềm nâng cao";
 
             // 1. Dọn dẹp Demo Events cũ (nếu có) để không bị rác khi ấn nhiều lần
             var oldEvents = await _unitOfWork.GetRepository<Event>().Entities
@@ -221,7 +228,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             var track5 = new Track
             {
                 Event = event2,
-                TrackName = "Phần mềm nâng cao",
+                TrackName = targetTrackName,
                 Description = "Hạng mục dành cho các sản phẩm phần mềm, ứng dụng web/mobile (Vòng Chung kết).",
                 SubmissionRuleDescription = "Link github repository dự án\nLink demo",
                 TemplateId = template?.Id,
@@ -245,9 +252,15 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             // Phân quyền EC cho event 2
             await AddEventRoleAsync(ecUser.Id, event2.Id, null, null, EventRoleType.EventCoordinator, event2.EndDate);
 
-            // Phân quyền cho event 2: Giám khảo cho track 2 (Thiết kế), Cố vấn cho track 3 (Phần mềm)
+            // Phân quyền cho event 2: Giám khảo cho track 2 (Thiết kế), Cố vấn cho track 5 (demo)
             await AddEventRoleAsync(judgeUser.Id, event2.Id, null, track2.Id, EventRoleType.Judge, event2.EndDate);
-            await AddEventRoleAsync(judgeUser.Id, event2.Id, null, track3.Id, EventRoleType.Mentor, event2.EndDate);
+
+            var mentorUser = await _unitOfWork.GetRepository<User>().Entities
+                .FirstOrDefaultAsync(u => u.Email == mentorEmail, cancellationToken);
+            if (mentorUser != null)
+            {
+                await AddEventRoleAsync(mentorUser.Id, event2.Id, null, track5.Id, EventRoleType.Mentor, event2.EndDate);
+            }
 
             // Lưu DB để có các ID hợp lệ
             await _unitOfWork.SaveChangesAsync(cancellationToken);
