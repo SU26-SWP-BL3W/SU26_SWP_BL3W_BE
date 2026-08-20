@@ -11,6 +11,11 @@ services:
         value: Production
       - key: ASPNETCORE_URLS
         value: http://+:8080
+      # Tat watch appsettings (inotify) — Render Free de cham limit 128 -> crash exit 139
+      - key: DOTNET_HOSTBUILDER_RELOADCONFIGONCHANGE
+        value: "false"
+      - key: DOTNET_USE_POLLING_FILE_WATCHER
+        value: "1"
       - key: Database__Ip
         fromDatabase:
           name: seal-bl3w-db

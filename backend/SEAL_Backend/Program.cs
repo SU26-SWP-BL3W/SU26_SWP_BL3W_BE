@@ -24,6 +24,19 @@ if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONM
     Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
 }
 
+// Render (va nhieu container host) gioi han ~128 inotify instance. WebApplication.CreateBuilder
+// mac dinh bat FileSystemWatcher de reload appsettings.json -> de cham tran limiit roi crash:
+// IOException "user limit (128) on the number of inotify instances has been reached" (exit 139).
+// Tat reload-on-change: env Production doi config qua redeploy, khong can watch file.
+if (string.Equals(
+        Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+        "Production",
+        StringComparison.OrdinalIgnoreCase)
+    && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOTNET_HOSTBUILDER_RELOADCONFIGONCHANGE")))
+{
+    Environment.SetEnvironmentVariable("DOTNET_HOSTBUILDER_RELOADCONFIGONCHANGE", "false");
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
