@@ -62,6 +62,16 @@ namespace SEAL_Application.Features.EventCoordinators.Commands.InviteEventCoordi
 
             var email = m.CoordinatorEmail.Trim();
 
+            // 1b. Không cho phép tự mời chính mình làm EC (tránh admin/EC tự gán rồi gỡ gây mất quyền nhầm)
+            var currentUser = !string.IsNullOrEmpty(invitedByUserId)
+                ? await _unitOfWork.GetRepository<User>().GetByIdAsync(invitedByUserId)
+                : null;
+            if (currentUser != null && string.Equals(currentUser.Email, email, StringComparison.OrdinalIgnoreCase))
+            {
+                return BaseException.BadRequestInvaildInputResponse(
+                    "Bạn không thể tự mời chính mình làm Event Coordinator. Vui lòng nhờ Admin khác phân công.");
+            }
+
             // 2. Người được mời: nếu CHƯA có tài khoản thì tạo tài khoản TẠM (IsTemporary) + gửi email xác thực
             //    (thay vì báo lỗi). Đã có tài khoản thì dùng luôn.
             var invitedUser = await _unitOfWork.GetRepository<User>().GetQueryable()
@@ -97,6 +107,12 @@ namespace SEAL_Application.Features.EventCoordinators.Commands.InviteEventCoordi
                     showLoginHint: false);
                 try { await _emailService.SendEmailAsync(invitedUser.Email, "[SEAL] Kích hoạt tài khoản để tham gia Ban tổ chức", verifyBody); }
                 catch (Exception ex) { _logger.LogWarning(ex, "Gửi email kích hoạt tài khoản tạm thất bại cho {Email}", invitedUser.Email); }
+            }
+
+            if (!string.IsNullOrEmpty(invitedByUserId) && invitedUser.Id == invitedByUserId)
+            {
+                return BaseException.BadRequestInvaildInputResponse(
+                    "Bạn không thể tự mời chính mình làm Event Coordinator. Vui lòng nhờ Admin khác phân công.");
             }
 
             // 3. Kiểm tra xung đột vai trò qua EventRoleValidationHelper (đồng bộ với Assign/Update):

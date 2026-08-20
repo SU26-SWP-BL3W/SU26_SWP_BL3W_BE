@@ -16,11 +16,16 @@ namespace SEAL_Application.Features.EventRoles.Commands.AssignEventRole
     {
         private readonly IUnitOfWork _unitOfWork;
         private readonly IEventRoleChecker _eventRoleChecker;
+        private readonly ICurrentUserService _currentUserService;
 
-        public AssignEventRoleCommandHandler(IUnitOfWork unitOfWork, IEventRoleChecker eventRoleChecker)
+        public AssignEventRoleCommandHandler(
+            IUnitOfWork unitOfWork,
+            IEventRoleChecker eventRoleChecker,
+            ICurrentUserService currentUserService)
         {
             _unitOfWork = unitOfWork;
             _eventRoleChecker = eventRoleChecker;
+            _currentUserService = currentUserService;
         }
 
         public async Task<Result<AssignEventRoleResponseModel>> Handle(AssignEventRoleCommand request, CancellationToken cancellationToken)
@@ -37,6 +42,16 @@ namespace SEAL_Application.Features.EventRoles.Commands.AssignEventRole
             if (targetEvent == null)
             {
                 return BaseException.BadRequestNotFoundResponse($"Sự kiện có ID '{request.Model.EventId}' không tồn tại.");
+            }
+
+            if (request.Model.RoleName == EventRoleType.EventCoordinator)
+            {
+                var currentUserId = _currentUserService.UserId;
+                if (!string.IsNullOrEmpty(currentUserId) && request.Model.UserId == currentUserId)
+                {
+                    return BaseException.BadRequestInvaildInputResponse(
+                        "Bạn không thể tự gán chính mình làm Event Coordinator. Vui lòng nhờ Admin khác phân công.");
+                }
             }
 
             // Kiểm tra TrackId (nếu có)
