@@ -74,6 +74,33 @@ namespace SEAL_Application.Features.Appeals.Commands.RespondAppeal
             appeal.Response = request.Response;
             if (request.Status == AppealStatus.Approved)
             {
+                if (string.IsNullOrEmpty(request.AssignedJudgeId))
+                {
+                    return BaseException.BadRequestInvaildInputResponse(
+                        "Duyệt phúc khảo bắt buộc gán AssignedJudgeId (EventRole giám khảo).");
+                }
+
+                var judgeRole = await _unitOfWork.GetRepository<EventRole>().GetByIdAsync(request.AssignedJudgeId);
+                if (judgeRole == null || judgeRole.RoleName != EventRoleType.Judge)
+                {
+                    return BaseException.BadRequestInvaildInputResponse(
+                        "AssignedJudgeId phải là vai trò Giám khảo (Judge) còn tồn tại.");
+                }
+
+                var eventId = appeal.SubmitResult.Round!.EventId;
+                if (judgeRole.EventId != eventId)
+                {
+                    return BaseException.BadRequestInvaildInputResponse(
+                        "Giám khảo được gán không thuộc sự kiện của đơn phúc khảo.");
+                }
+
+                var submitTrackId = appeal.SubmitResult.TrackId;
+                if (!string.IsNullOrEmpty(judgeRole.TrackId) && judgeRole.TrackId != submitTrackId)
+                {
+                    return BaseException.BadRequestInvaildInputResponse(
+                        "Giám khảo được gán không thuộc hạng mục của bài nộp đang phúc khảo.");
+                }
+
                 appeal.AssignedJudgeId = request.AssignedJudgeId;
             }
             appeal.LastUpdatedTime = CoreHelper.SystemTimeNow;

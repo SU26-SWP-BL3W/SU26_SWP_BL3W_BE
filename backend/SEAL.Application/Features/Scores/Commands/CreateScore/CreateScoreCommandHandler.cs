@@ -92,16 +92,28 @@ namespace SEAL_Application.Features.Scores.Commands.CreateScore
                 return new BaseException.ForbiddenException("Không thể chấm bài của đội mà bạn là thành viên (xung đột lợi ích).");
             }
 
-            // 1e. Chỉ được chấm SAU khi vòng kết thúc + khóa khi kết quả đã công bố (đồng bộ SaveScore) —
-            //     trước đây endpoint này là "đường vòng" lách qua toàn bộ rào của SaveScore.
+            // 1e. Cửa sổ chấm — đồng bộ SaveScore: sau hạn nộp (Track ?? Round), trong ScoringStart/End,
+            //     và chưa có FinalResult. (Trước đây chỉ check Round.EndDate — đường vòng lách luật.)
             var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(submit.TrackId);
-            if (track != null)
-            {
             var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(submit.RoundId);
-            if (round != null && System.DateTime.UtcNow <= round.EndDate)
+            var now = System.DateTime.UtcNow;
+
+            var effectiveEndDate = track?.EndDate ?? round?.EndDate;
+            if (effectiveEndDate.HasValue && now <= effectiveEndDate.Value)
             {
                 return BaseException.BadRequestInvaildInputResponse(
-                    "Vòng thi chưa kết thúc nên chưa thể chấm bài (đội vẫn còn quyền nộp/sửa bài).");
+                    "Hạng mục chưa kết thúc nộp bài nên chưa thể chấm (đội vẫn còn quyền nộp/sửa bài).");
+            }
+
+            var effectiveScoringStartDate = track?.ScoringStartDate ?? round?.ScoringStartDate;
+            var effectiveScoringEndDate = track?.ScoringEndDate ?? round?.ScoringEndDate;
+            if (effectiveScoringStartDate.HasValue && now < effectiveScoringStartDate.Value)
+            {
+                return BaseException.BadRequestInvaildInputResponse("Chưa tới thời gian chấm điểm của hạng mục này.");
+            }
+            if (effectiveScoringEndDate.HasValue && now > effectiveScoringEndDate.Value)
+            {
+                return new BaseException.ForbiddenException("Đã hết hạn chấm điểm của hạng mục này.");
             }
 
             var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
@@ -109,7 +121,6 @@ namespace SEAL_Application.Features.Scores.Commands.CreateScore
             if (roundPublished)
             {
                 return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể tạo phiếu chấm.");
-            }
             }
 
             // 2. Một giám khảo không chấm trùng cùng một bài nộp

@@ -45,6 +45,31 @@ namespace SEAL_Application.Features.FinalResults.Commands.CreateFinalResult
                 !await _unitOfWork.GetRepository<Track>().AnyAsync(t => t.Id == m.TrackId, cancellationToken))
                 return BaseException.BadRequestNotFoundResponse($"Hạng mục '{m.TrackId}' không tồn tại.");
 
+            // 2b. Team phải tồn tại và thuộc đúng sự kiện của phạm vi đang ghi kết quả
+            var team = await _unitOfWork.GetRepository<Team>().GetByIdAsync(m.TeamId);
+            if (team == null)
+            {
+                return BaseException.BadRequestNotFoundResponse($"Đội thi '{m.TeamId}' không tồn tại.");
+            }
+
+            string? scopeEventId = m.EventId;
+            if (!string.IsNullOrEmpty(m.RoundId))
+            {
+                var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(m.RoundId);
+                scopeEventId = round?.EventId;
+            }
+            else if (!string.IsNullOrEmpty(m.TrackId))
+            {
+                var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(m.TrackId);
+                scopeEventId = track?.EventId;
+            }
+
+            if (string.IsNullOrEmpty(scopeEventId) || team.EventId != scopeEventId)
+            {
+                return BaseException.BadRequestInvaildInputResponse(
+                    "Đội thi không thuộc sự kiện của phạm vi kết quả đang tạo.");
+            }
+
             // 3. Upsert: tìm theo Team + đúng phạm vi -> có thì cập nhật, chưa có thì tạo
             var repo = _unitOfWork.GetRepository<FinalResult>();
             var finalResult = await repo.Entities.FirstOrDefaultAsync(

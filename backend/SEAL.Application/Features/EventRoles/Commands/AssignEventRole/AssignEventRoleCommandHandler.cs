@@ -77,11 +77,15 @@ namespace SEAL_Application.Features.EventRoles.Commands.AssignEventRole
                     return BaseException.BadRequestResponse($"TeamId là bắt buộc đối với vai trò '{request.Model.RoleName}'.");
                 }
 
-                // Giải quyết TODO: Xác thực xem TeamId có thực sự tồn tại trong DB không (Fix 8)
-                var teamExists = await _unitOfWork.GetRepository<Team>().AnyAsync(t => t.Id == request.Model.TeamId, cancellationToken);
-                if (!teamExists)
+                // Giải quyết TODO: Xác thực Team tồn tại VÀ thuộc đúng sự kiện đang gán vai trò
+                var team = await _unitOfWork.GetRepository<Team>().GetByIdAsync(request.Model.TeamId);
+                if (team == null)
                 {
                     return BaseException.BadRequestNotFoundResponse($"Nhóm có ID '{request.Model.TeamId}' không tồn tại.");
+                }
+                if (team.EventId != request.Model.EventId)
+                {
+                    return BaseException.BadRequestResponse($"Nhóm '{request.Model.TeamId}' không thuộc sự kiện này.");
                 }
 
                 // Áp dụng quy tắc "1 user / 1 team / 1 event" (Fix 3)

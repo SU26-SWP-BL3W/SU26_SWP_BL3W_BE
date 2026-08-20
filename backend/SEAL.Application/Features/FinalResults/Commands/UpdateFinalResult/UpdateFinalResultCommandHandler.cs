@@ -27,11 +27,28 @@ namespace SEAL_Application.Features.FinalResults.Commands.UpdateFinalResult
                 return BaseException.BadRequestNotFoundResponse($"Kết quả chung cuộc có ID '{request.Id}' không tồn tại.");
             }
 
+            if (finalResult.IsPublished)
+            {
+                return BaseException.BadRequestInvaildInputResponse(
+                    "Kết quả đã công bố không thể sửa thủ công. Hãy hủy công bố hoặc tính lại kết quả.");
+            }
+
             // 2. Kiểm tra Round mới có tồn tại
             var newRound = await _unitOfWork.GetRepository<Round>().GetByIdAsync(request.Model.RoundId);
             if (newRound == null)
             {
                 return BaseException.BadRequestNotFoundResponse($"Vòng thi có ID '{request.Model.RoundId}' không tồn tại.");
+            }
+
+            var team = await _unitOfWork.GetRepository<Team>().GetByIdAsync(request.Model.TeamId);
+            if (team == null)
+            {
+                return BaseException.BadRequestNotFoundResponse($"Đội thi '{request.Model.TeamId}' không tồn tại.");
+            }
+            if (team.EventId != newRound.EventId)
+            {
+                return BaseException.BadRequestInvaildInputResponse(
+                    "Đội thi không thuộc cùng sự kiện với vòng thi được chọn.");
             }
 
             // 2b. Round mới phải CÙNG SỰ KIỆN với kết quả đang sửa — không cho chuyển kết quả sang

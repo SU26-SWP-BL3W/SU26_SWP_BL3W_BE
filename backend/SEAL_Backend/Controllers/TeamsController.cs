@@ -371,7 +371,8 @@ namespace SEAL_Backend.Controllers
         }
 
         /// <summary>
-        /// EC/Admin LOẠI đội đang thi vì vi phạm. Lý do bắt buộc, lưu LastRejectReason; kết quả nháp của đội bị xóa.
+        /// EC/Admin LOẠI đội đang thi vì vi phạm. Lý do bắt buộc, lưu LastRejectReason;
+        /// xóa toàn bộ FinalResult của đội (kể cả đã công bố); vô hiệu hóa bài nộp.
         /// </summary>
         [HttpPost("{teamId}/disqualify")]
         [EventRoleAuthorize(EventRoleType.EventCoordinator)]

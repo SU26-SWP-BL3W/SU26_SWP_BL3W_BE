@@ -79,12 +79,13 @@ namespace SEAL_Application.Features.Teams.Commands.DisqualifyTeam
             team.LastUpdatedTime = CoreHelper.SystemTimeNow;
             await _unitOfWork.GetRepository<Team>().UpdateAsync(team);
 
-            var draftResults = await _unitOfWork.GetRepository<FinalResult>().Entities
-                .Where(fr => fr.TeamId == team.Id && !fr.IsPublished)
+            var allResults = await _unitOfWork.GetRepository<FinalResult>().Entities
+                .Where(fr => fr.TeamId == team.Id)
                 .ToListAsync(cancellationToken);
-            if (draftResults.Count > 0)
+            if (allResults.Count > 0)
             {
-                await _unitOfWork.GetRepository<FinalResult>().DeleteRangeAsync(draftResults);
+                // Xóa cả bản đã công bố — đội bị loại không được còn trên BXH.
+                await _unitOfWork.GetRepository<FinalResult>().DeleteRangeAsync(allResults);
             }
 
             // Vô hiệu (không xóa) bài nộp của đội bị loại — giữ lại để đối chiếu/kiểm tra sau này,

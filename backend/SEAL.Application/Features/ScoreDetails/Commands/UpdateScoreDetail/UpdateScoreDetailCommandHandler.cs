@@ -5,6 +5,7 @@ using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
 using SEAL_Domain.Ultis;
 using SEAL_Application.Features.ScoreDetails.Commands.UpdateScoreDetail.Models;
+using SEAL_Application.Features.ScoreDetails;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -68,6 +69,10 @@ namespace SEAL_Application.Features.ScoreDetails.Commands.UpdateScoreDetail
             {
                 return new BaseException.ForbiddenException("Bạn không có quyền cập nhật điểm chi tiết của phiếu chấm này.");
             }
+
+            var submittedLock = await ScoreDetailMutationGuard.EnsureScoreMutableAsync(
+                _unitOfWork, score, cancellationToken);
+            if (submittedLock != null) return submittedLock;
 
             // 1b. KHÓA SAU CÔNG BỐ: kết quả vòng đã tính thì điểm chi tiết đóng băng
             //     (sửa điểm làm TotalScore lệch khỏi kết quả đã công bố).

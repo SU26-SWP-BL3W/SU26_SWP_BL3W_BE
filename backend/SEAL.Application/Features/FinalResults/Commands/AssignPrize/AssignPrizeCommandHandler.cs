@@ -33,6 +33,15 @@ namespace SEAL_Application.Features.FinalResults.Commands.AssignPrize
                     return BaseException.BadRequestInvaildInputResponse("Giải thưởng không thuộc cùng sự kiện với kết quả này.");
                 }
 
+                if (!string.IsNullOrEmpty(prize.TrackId))
+                {
+                    if (string.IsNullOrEmpty(result.TrackId) || result.TrackId != prize.TrackId)
+                    {
+                        return BaseException.BadRequestInvaildInputResponse(
+                            "Giải thưởng gắn hạng mục cụ thể nhưng kết quả không thuộc hạng mục đó.");
+                    }
+                }
+
                 if (result.PrizeId != prize.Id)
                 {
                     var currentAssignedCount = _unitOfWork.GetRepository<FinalResult>()
