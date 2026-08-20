@@ -15,7 +15,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Check for .NET project        id: dotnet_check
+      - name: Check for .NET project
+        id: dotnet_check
         run: |
           if find . -name "*.csproj" -not -path "*/obj/*" -not -path "*/bin/*" | grep -q .; then
             echo "found=true" >> $GITHUB_OUTPUT
