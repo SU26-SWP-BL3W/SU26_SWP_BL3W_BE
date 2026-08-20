@@ -49,7 +49,14 @@ builder.Services.AddScoped<IEventRoleChecker, SEAL_Application.Services.EventRol
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IAuditLogService, SEAL_Application.Services.AuditLogService>();
 builder.Services.AddScoped<INotificationService, SEAL_Application.Services.NotificationService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
+// Doi tu EmailService (SMTP/MailKit) sang BrevoEmailService (HTTPS API) vi Render chan/nghen
+// cong SMTP 587 ra ngoai (ConnectAsync treo dung 20s roi timeout) - xem comment chi tiet trong
+// BrevoEmailService.cs. EmailService.cs van giu lai trong repo phong khi can doi provider khac.
+builder.Services.AddHttpClient<IEmailService, BrevoEmailService>(client =>
+{
+    client.BaseAddress = new Uri("https://api.brevo.com/");
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
 builder.Services.AddHttpClient<IGitHostingService, GitHostingService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(5);
