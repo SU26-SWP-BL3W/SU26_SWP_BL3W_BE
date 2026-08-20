@@ -39,11 +39,11 @@ namespace SEAL_Application.Features.EventRoles.Queries.GetEventRolesByEventId
                 query = query.Where(er => er.TrackId == request.TrackId);
             }
 
-            // Chỉ lấy vai trò còn hiệu lực (chưa hết hạn) nếu yêu cầu.
+            // Chỉ lấy vai trò còn hiệu lực (ExpiredAt hoặc fallback Event.EndDate).
             if (request.ActiveOnly)
             {
                 var now = System.DateTime.UtcNow;
-                query = query.Where(er => er.ExpiredAt == null || er.ExpiredAt > now);
+                query = query.Where(er => (er.ExpiredAt ?? er.Event.EndDate) > now);
             }
 
             return await query.ToPagedResultAsync(
@@ -57,6 +57,7 @@ namespace SEAL_Application.Features.EventRoles.Queries.GetEventRolesByEventId
                     TeamId = er.TeamId,
                     RoleName = er.RoleName.ToString(),
                     EventName = er.Event != null ? er.Event.EventName : null,
+                    EventEndDate = er.Event != null ? er.Event.EndDate : null,
                     TrackName = er.Track != null ? er.Track.TrackName : null,
                     TeamName = er.Team != null ? er.Team.Name : null,
                     User = er.User != null ? new UserModel

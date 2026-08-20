@@ -20,6 +20,8 @@ namespace SEAL_Application.Features.EventRoles.Models
         public UserModel? User { get; set; }
         public DateTime? AssignedAt { get; set; }
         public DateTime? ExpiredAt { get; set; }
+        /// <summary>Ngày kết thúc sự kiện — dùng làm hạn role khi ExpiredAt null.</summary>
+        public DateTime? EventEndDate { get; set; }
         public string? Notes { get; set; }
         public DateTimeOffset CreatedTime { get; set; }
         public DateTimeOffset LastUpdatedTime { get; set; }

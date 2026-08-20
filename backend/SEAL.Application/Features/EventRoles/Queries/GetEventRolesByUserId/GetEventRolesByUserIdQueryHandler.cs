@@ -25,6 +25,7 @@ namespace SEAL_Application.Features.EventRoles.Queries.GetEventRolesByUserId
         {
             var query = _unitOfWork.GetRepository<EventRole>().Entities
                 .Include(er => er.User)
+                .Include(er => er.Event)
                 .Where(er => er.UserId == request.UserId);
 
             return await query.ToPagedResultAsync(
@@ -37,6 +38,8 @@ namespace SEAL_Application.Features.EventRoles.Queries.GetEventRolesByUserId
                     TrackId = er.TrackId,
                     TeamId = er.TeamId,
                     RoleName = er.RoleName.ToString(),
+                    EventName = er.Event != null ? er.Event.EventName : null,
+                    EventEndDate = er.Event != null ? er.Event.EndDate : null,
                     User = er.User != null ? new UserModel
                     {
                         Id = er.User.Id,

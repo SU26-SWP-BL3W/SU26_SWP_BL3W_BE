@@ -77,6 +77,15 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
                 return new BaseException.ForbiddenException("Bạn không thể lưu phiếu chấm dưới vai trò của người khác.");
             }
 
+            // 2a'. Role hết hạn (ExpiredAt hoặc fallback Event.EndDate) — trừ phúc khảo được giao (check sau).
+            var nowUtc = System.DateTime.UtcNow;
+            DateTime? effectiveExpiry = eventRole.ExpiredAt;
+            if (!effectiveExpiry.HasValue)
+            {
+                var roleEvent = await _unitOfWork.GetRepository<Event>().GetByIdAsync(eventRole.EventId);
+                effectiveExpiry = roleEvent?.EndDate;
+            }
+
             // 2b. Lấy bài nộp; Giám khảo (Judge) gắn Track chỉ được chấm bài thuộc đúng hạng mục được phân công.
             var submit = await _unitOfWork.GetRepository<SubmitResult>().GetByIdAsync(m.SubmitResultId);
             if (submit == null)
@@ -130,6 +139,12 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
             if (!isNew && score!.IsSubmitted && !isAssignedAppeal)
             {
                 return new BaseException.ForbiddenException("Bài thi này đã được chốt điểm và không thể chỉnh sửa trừ khi có yêu cầu phúc khảo được phân công cho bạn.");
+            }
+
+            if (!isAssignedAppeal && effectiveExpiry.HasValue && nowUtc > effectiveExpiry.Value)
+            {
+                return new BaseException.ForbiddenException(
+                    "Vai trò Giám khảo đã hết hạn (sự kiện/phân công đã kết thúc) nên không thể chấm điểm mới.");
             }
 
             if (!isAssignedAppeal)

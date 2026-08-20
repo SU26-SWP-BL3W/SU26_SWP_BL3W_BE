@@ -51,11 +51,13 @@ namespace SEAL_Application.Services
             // Lookup in cache
             if (!_memoryCache.TryGetValue(cacheKey, out UserEventRoleDto[]? userRoles))
             {
-                // Fetch from DB
+            // Fetch from DB — ExpiredAt null → dùng Event.EndDate (role không "sống vĩnh viễn")
+                var nowUtc = DateTime.UtcNow;
                 userRoles = await _unitOfWork.GetRepository<EventRole>().GetQueryable()
                     .AsNoTracking()
+                    .Include(er => er.Event)
                     .Where(er => er.UserId == userId && er.EventId == eventId)
-                    .Where(er => er.ExpiredAt == null || er.ExpiredAt > DateTime.UtcNow)
+                    .Where(er => (er.ExpiredAt ?? er.Event.EndDate) > nowUtc)
                     .Select(er => new UserEventRoleDto
                     {
                         RoleName = er.RoleName,

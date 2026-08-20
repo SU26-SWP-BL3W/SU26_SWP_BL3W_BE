@@ -69,10 +69,11 @@ namespace SEAL_Application.Features.Scores.Queries.GetTeamScoreBreakdown
                 var nowUtc = System.DateTime.UtcNow;
                 var mentorTrackIds = await _unitOfWork.GetRepository<EventRole>().Entities
                     .AsNoTracking()
+                    .Include(er => er.Event)
                     .Where(er => er.UserId == currentUserId
                               && er.EventId == team.EventId
                               && er.RoleName == EventRoleType.Mentor
-                              && (er.ExpiredAt == null || er.ExpiredAt > nowUtc))
+                              && (er.ExpiredAt ?? er.Event.EndDate) > nowUtc)
                     .Select(er => er.TrackId)
                     .ToListAsync(cancellationToken);
 

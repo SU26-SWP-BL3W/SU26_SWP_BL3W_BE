@@ -92,6 +92,11 @@ namespace SEAL_Application.Features.EventRoles.Commands.UpdateEventRole
             eventRole.TeamId = request.Model.TeamId;
             eventRole.RoleName = request.Model.RoleName;
             eventRole.ExpiredAt = request.Model.ExpiredAt;
+            if (!eventRole.ExpiredAt.HasValue)
+            {
+                var targetEvent = await _unitOfWork.GetRepository<Event>().GetByIdAsync(eventRole.EventId);
+                eventRole.ExpiredAt = targetEvent?.EndDate;
+            }
             eventRole.Notes = request.Model.Notes;
             eventRole.LastUpdatedTime = CoreHelper.SystemTimeNow;
 

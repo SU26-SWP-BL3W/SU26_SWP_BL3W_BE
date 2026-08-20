@@ -52,7 +52,8 @@ namespace SEAL_Application.Features.Users.Commands.LoginUser
             {
                 var now = System.DateTime.UtcNow;
                 var hasActiveRole = await _unitOfWork.GetRepository<EventRole>().Entities
-                    .AnyAsync(er => er.UserId == user.Id && (er.ExpiredAt == null || er.ExpiredAt > now), cancellationToken);
+                    .Include(er => er.Event)
+                    .AnyAsync(er => er.UserId == user.Id && (er.ExpiredAt ?? er.Event.EndDate) > now, cancellationToken);
                 if (!hasActiveRole)
                 {
                     // Tài khoản tạm do MỜI VÀO ĐỘI tạo ra chưa có EventRole (chỉ có sau khi CHẤP NHẬN lời mời)

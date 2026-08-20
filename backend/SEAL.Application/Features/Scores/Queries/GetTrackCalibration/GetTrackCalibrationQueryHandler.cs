@@ -59,9 +59,10 @@ namespace SEAL_Application.Features.Scores.Queries.GetTrackCalibration
             var judges = await _unitOfWork.GetRepository<EventRole>().Entities
                 .AsNoTracking()
                 .Include(er => er.User)
+                .Include(er => er.Event)
                 .Where(er => er.TrackId == track.Id
                           && er.RoleName == EventRoleType.Judge
-                          && (er.ExpiredAt == null || er.ExpiredAt > nowUtc))
+                          && (er.ExpiredAt ?? er.Event.EndDate) > nowUtc)
                 .ToListAsync(cancellationToken);
 
             var submissions = await _unitOfWork.GetRepository<SubmitResult>().Entities

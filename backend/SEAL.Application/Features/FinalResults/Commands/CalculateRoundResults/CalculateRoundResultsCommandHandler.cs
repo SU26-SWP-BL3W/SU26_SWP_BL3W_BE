@@ -92,10 +92,11 @@ namespace SEAL_Application.Features.FinalResults.Commands.CalculateRoundResults
             var nowUtc = System.DateTime.UtcNow;
             var judgeRoles = await _unitOfWork.GetRepository<EventRole>().Entities
                 .AsNoTracking()
+                .Include(er => er.Event)
                 .Where(er => er.EventId == round.EventId
                           && er.RoleName == EventRoleType.Judge
                           && er.TrackId != null
-                          && (er.ExpiredAt == null || er.ExpiredAt > nowUtc))
+                          && (er.ExpiredAt ?? er.Event.EndDate) > nowUtc)
                 .ToListAsync(cancellationToken);
             var judgeRoleIds = judgeRoles.Select(j => j.Id).ToHashSet();
 

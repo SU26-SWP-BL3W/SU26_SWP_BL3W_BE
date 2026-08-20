@@ -31,7 +31,9 @@ namespace SEAL_Infrastructure.Services
 
         public async Task SendEmailAsync(string toEmail, string subject, string body)
         {
-            var apiKey = _config["BrevoSettings:ApiKey"] ?? _config["BREVO_API_KEY"];
+            var apiKey = _config["BrevoSettings:ApiKey"] 
+                ?? _config["BREVO_API_KEY"] 
+                ?? _config["BrevoSettings__ApiKey"];
             var outboxPath = _config["EmailSettings:OutboxPath"] ?? _config["EMAIL_OUTBOX_PATH"];
 
             bool isPlaceholder = string.IsNullOrWhiteSpace(apiKey) || apiKey.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase);
@@ -55,8 +57,11 @@ namespace SEAL_Infrastructure.Services
 
             var senderEmail = _config["BrevoSettings:SenderEmail"]
                 ?? _config["BREVO_SENDER_EMAIL"]
+                ?? _config["BrevoSettings__SenderEmail"]
                 ?? "truonghoangphuc27012005@gmail.com";
-            var senderName = _config["BrevoSettings:SenderName"] ?? "SEAL Hackathon";
+            var senderName = _config["BrevoSettings:SenderName"] 
+                ?? _config["BREVO_SENDER_NAME"] 
+                ?? "SEAL Hackathon";
 
             var payload = new BrevoSendRequest
             {

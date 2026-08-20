@@ -34,7 +34,7 @@ namespace SEAL_Application.Features.Events.Queries.GetMyEvents
 
             var myEvents = await _unitOfWork.GetRepository<EventRole>().Entities
                 .Include(er => er.Event)
-                .Where(er => er.UserId == currentUserId && (er.ExpiredAt == null || er.ExpiredAt > DateTime.UtcNow))
+                .Where(er => er.UserId == currentUserId && (er.ExpiredAt ?? er.Event.EndDate) > DateTime.UtcNow)
                 .Select(er => new MyEventResponseModel
                 {
                     Id = er.Event.Id,
