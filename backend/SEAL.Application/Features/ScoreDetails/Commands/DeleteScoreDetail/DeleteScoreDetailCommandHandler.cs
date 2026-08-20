@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using SEAL_Application.Features.ScoreDetails;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
@@ -70,6 +71,10 @@ namespace SEAL_Application.Features.ScoreDetails.Commands.DeleteScoreDetail
             {
                 return new BaseException.ForbiddenException("Bạn không có quyền xóa điểm chi tiết của phiếu chấm này.");
             }
+
+            var submittedLock = await ScoreDetailMutationGuard.EnsureScoreMutableAsync(
+                _unitOfWork, score, cancellationToken);
+            if (submittedLock != null) return submittedLock;
 
             // 1b. KHÓA SAU CÔNG BỐ: kết quả vòng đã tính thì điểm chi tiết đóng băng
             //     (xóa điểm làm TotalScore lệch khỏi kết quả đã công bố).

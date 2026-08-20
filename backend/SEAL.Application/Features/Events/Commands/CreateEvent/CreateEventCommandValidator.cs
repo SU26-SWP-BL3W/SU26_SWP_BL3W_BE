@@ -141,9 +141,13 @@ namespace SEAL_Application.Features.Events.Commands.CreateEvent
                     if (currentUser == null) return false;
                     if (currentUser.IsAdmin) return true;
 
+                    var now = System.DateTime.UtcNow;
                     var isCoordinator = await _unitOfWork.GetRepository<EventRole>().GetQueryable()
                         .AsNoTracking()
-                        .AnyAsync(er => er.UserId == currentUserId && er.RoleName == EventRoleType.EventCoordinator, cancellationToken);
+                        .AnyAsync(er => er.UserId == currentUserId
+                                     && er.RoleName == EventRoleType.EventCoordinator
+                                     && (er.ExpiredAt == null || er.ExpiredAt > now),
+                            cancellationToken);
 
                     return isCoordinator;
                 })

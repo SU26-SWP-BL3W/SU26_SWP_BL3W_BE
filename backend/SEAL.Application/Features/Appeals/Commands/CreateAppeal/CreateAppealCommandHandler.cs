@@ -52,17 +52,23 @@ namespace SEAL_Application.Features.Appeals.Commands.CreateAppeal
                 return new BaseException.ForbiddenException("Chỉ trưởng nhóm (Team Leader) mới được gửi đơn phúc khảo.");
             }
 
-            // 2. Kiểm tra thời gian phúc khảo
+            // 2. Cửa sổ phúc khảo: ưu tiên Round.AppealStart/End; nếu chưa cấu hình thì
+            //    fallback sau ScoringEnd (hoặc Round.End) tới hết hạn AppealEnd nếu có.
             var round = submitResult.Round;
             var now = CoreHelper.SystemTimeNow.UtcDateTime;
 
-            if (now < round.StartDate)
+            var appealStart = round.AppealStartDate
+                ?? round.ScoringEndDate
+                ?? round.EndDate;
+            var appealEnd = round.AppealEndDate;
+
+            if (now < appealStart)
             {
-                return BaseException.BadRequestInvaildInputResponse("Vòng thi chưa bắt đầu, không thể gửi đơn phúc khảo.");
+                return BaseException.BadRequestInvaildInputResponse("Chưa tới thời gian mở phúc khảo.");
             }
-            if (now > round.EndDate)
+            if (appealEnd.HasValue && now > appealEnd.Value)
             {
-                return BaseException.BadRequestInvaildInputResponse("Đã hết thời gian vòng thi, không thể gửi đơn phúc khảo.");
+                return BaseException.BadRequestInvaildInputResponse("Đã hết thời gian phúc khảo.");
             }
 
             // 3. Kiểm tra xem vòng thi đã chốt (IsPublished == true) chưa. Nếu đã chốt thì cấm phúc khảo.

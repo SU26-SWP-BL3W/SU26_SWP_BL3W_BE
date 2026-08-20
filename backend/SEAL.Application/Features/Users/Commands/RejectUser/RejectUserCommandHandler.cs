@@ -109,8 +109,29 @@ namespace SEAL_Application.Features.Users.Commands.RejectUser
             };
             await _unitOfWork.GetRepository<UserRejection>().AddAsync(userRejection);
 
-            // 7. Cập nhật các đội liên quan về trạng thái Forming và không active
-            var teamIds = userRoles.Select(er => er.TeamId).Where(id => id != null).Distinct().ToList();
+            // 7. Hạ đội chỉ trong các sự kiện mà caller có quyền (Admin → mọi event liên quan;
+            //    EC → chỉ đội thuộc event mà họ là EC). Tránh EC event A làm hỏng đội ở event B.
+            var allowedEventIds = new System.Collections.Generic.HashSet<string>();
+            if (isAdmin)
+            {
+                foreach (var eid in eventIds) allowedEventIds.Add(eid);
+            }
+            else
+            {
+                foreach (var eventId in eventIds)
+                {
+                    var isCoord = await _eventRoleChecker.HasRoleAsync(
+                        currentUserId, eventId, new[] { EventRoleType.EventCoordinator }, cancellationToken);
+                    if (isCoord) allowedEventIds.Add(eventId);
+                }
+            }
+
+            var teamIds = userRoles
+                .Where(er => er.TeamId != null && allowedEventIds.Contains(er.EventId))
+                .Select(er => er.TeamId)
+                .Where(id => id != null)
+                .Distinct()
+                .ToList();
             foreach (var teamId in teamIds)
             {
                 var team = await _unitOfWork.GetRepository<Team>().GetByIdAsync(teamId!);
