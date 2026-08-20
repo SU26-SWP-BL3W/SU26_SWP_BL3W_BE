@@ -118,12 +118,21 @@ namespace SEAL_Application.Features.Users.Commands.RegisterUser
                 noteHtml: $"Liên kết kích hoạt sẽ hết hạn sau {ACTIVATION_EXPIRY_HOURS} giờ.",
                 showLoginHint: false);
 
-            // Bọc try/catch giống mọi luồng gửi email khác trong dự án — SMTP lỗi/chưa cấu hình không
-            // được làm hỏng đăng ký: User đã lưu DB ở bước trên, thiếu try/catch ở đây sẽ làm cả API
-            // trả 500 dù tài khoản đã tạo thành công, kẹt người dùng ở trạng thái không đăng ký lại được
-            // (trùng email) mà cũng không có token xác thực (nằm trong email chưa từng gửi được).
-            try { await _emailService.SendEmailAsync(user.Email, "[SEAL] Kích hoạt tài khoản đăng ký", emailBody); }
-            catch (Exception ex) { _logger.LogWarning(ex, "Gửi email kích hoạt đăng ký thất bại cho {Email}", user.Email); }
+            // Không nuốt lỗi gửi email nữa: nếu SMTP chưa cấu hình hoặc gửi thất bại thì FE phải nhận lỗi rõ ràng,
+            // để người dùng dùng flow "Gửi lại email xác thực" thay vì nghĩ rằng đã đăng ký thành công.
+            try
+            {
+                await _emailService.SendEmailAsync(user.Email, "[SEAL] Kích hoạt tài khoản đăng ký", emailBody);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Send activation email failed for {Email}", user.Email);
+                throw new BaseException.ErrorException(
+                    500,
+                    "EMAIL_SEND_FAILED",
+                    "Không gửi được email xác thực. Vui lòng thử lại sau hoặc dùng chức năng 'Gửi lại email xác thực'."
+                );
+            }
 
             return new UserModel
             {
