@@ -31,12 +31,14 @@ namespace SEAL_Infrastructure.Services
 
         public async Task SendEmailAsync(string toEmail, string subject, string body)
         {
-            var apiKey = _config["BrevoSettings:ApiKey"];
-            var outboxPath = _config["EmailSettings:OutboxPath"];
+            var apiKey = _config["BrevoSettings:ApiKey"] ?? _config["BREVO_API_KEY"];
+            var outboxPath = _config["EmailSettings:OutboxPath"] ?? _config["EMAIL_OUTBOX_PATH"];
 
-            // DEV FALLBACK: chua cau hinh BrevoSettings:ApiKey nhung co OutboxPath (thuong chi o
-            // Development) -> ghi email ra file HTML de xem truoc, khong goi Brevo that.
-            if (string.IsNullOrWhiteSpace(apiKey) && !string.IsNullOrWhiteSpace(outboxPath))
+            bool isPlaceholder = string.IsNullOrWhiteSpace(apiKey) || apiKey.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase);
+
+            // DEV FALLBACK: chua cau hinh BrevoSettings:ApiKey hoac con la placeholder "YOUR_..."
+            // nhung co OutboxPath (thuong chi o Development) -> ghi email ra file HTML de xem truoc.
+            if (isPlaceholder && !string.IsNullOrWhiteSpace(outboxPath))
             {
                 Directory.CreateDirectory(outboxPath);
                 var html = $"<!-- To: {toEmail} | Subject: {subject} | {DateTime.Now:O} -->\n{body}";
@@ -46,13 +48,14 @@ namespace SEAL_Infrastructure.Services
                 return;
             }
 
-            if (string.IsNullOrWhiteSpace(apiKey))
+            if (isPlaceholder)
             {
-                throw new InvalidOperationException("Chưa cấu hình BrevoSettings:ApiKey.");
+                throw new InvalidOperationException("Chưa cấu hình BrevoSettings:ApiKey hợp lệ.");
             }
 
             var senderEmail = _config["BrevoSettings:SenderEmail"]
-                ?? throw new InvalidOperationException("Chưa cấu hình BrevoSettings:SenderEmail.");
+                ?? _config["BREVO_SENDER_EMAIL"]
+                ?? "truonghoangphuc27012005@gmail.com";
             var senderName = _config["BrevoSettings:SenderName"] ?? "SEAL Hackathon";
 
             var payload = new BrevoSendRequest
