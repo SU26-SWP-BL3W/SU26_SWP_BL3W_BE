@@ -57,7 +57,7 @@ namespace SEAL_Application.Services
                     .AsNoTracking()
                     .Include(er => er.Event)
                     .Where(er => er.UserId == userId && er.EventId == eventId)
-                    .Where(er => (er.ExpiredAt ?? er.Event.EndDate) > nowUtc)
+                    .Where(er => (er.ExpiredAt ?? (er.Event != null ? (DateTime?)er.Event.EndDate : DateTime.MaxValue)) > nowUtc)
                     .Select(er => new UserEventRoleDto
                     {
                         RoleName = er.RoleName,
