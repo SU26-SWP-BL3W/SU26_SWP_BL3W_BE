@@ -4,6 +4,7 @@ using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
 using SEAL_Domain.Ultis;
 using SEAL_Application.Features.Criterias.Commands.UpdateCriteria.Models;
+using SEAL_Application.Features.Criterias;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -37,6 +38,12 @@ namespace SEAL_Application.Features.Criterias.Commands.UpdateCriteria
             if (isDuplicate)
             {
                 return BaseException.BadRequestDupplicationResponse($"Tiêu chí '{request.Model.CriteriaName}' đã tồn tại.");
+            }
+
+            if (await CriteriaUsageHelper.IsUsedInScoringAsync(_unitOfWork, request.Id, cancellationToken))
+            {
+                return BaseException.BadRequestInvaildInputResponse(
+                    "Tiêu chí này đã được dùng để chấm điểm nên không thể thay đổi tên, mô tả hoặc trạng thái.");
             }
 
             // 3. Cập nhật thông tin Criteria

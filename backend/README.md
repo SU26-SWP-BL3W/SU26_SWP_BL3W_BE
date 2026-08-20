@@ -19,11 +19,11 @@
 
 SEAL Backend is a REST API built with **ASP.NET Core (.NET 10)**, powering the SEAL competition/event judging platform. It serves the frontend (web) and exposes endpoints for:
 
-- **Auth & Users** *(planned — not yet ported into this repo)*: registration, login, JWT refresh, role invitations.
-- **Events & Rounds** *(planned)*: events, rounds, tracks, scoring templates & criteria.
-- **Teams** *(planned)*: team creation, member invitations, event registration.
+- **Auth & Users** *(implemented)*: registration, login, JWT refresh, role invitations, student profile verification.
+- **Events & Rounds** *(implemented)*: events, rounds, tracks, scoring templates & criteria.
+- **Teams** *(implemented)*: team creation, member invitations, event registration, disqualification.
 - **Submissions & Scoring** *(implemented)*: teams submit their work per track, judges score against a weighted criteria template, mentors track team progress.
-- **Results & Prizes** *(partially implemented — calculation only)*: per-track ranking, advancement rules, publishing, prize assignment.
+- **Results & Prizes** *(implemented)*: per-track ranking, advancement rules, publishing, prize assignment, appeals.
 
 The domain layer (all 19 entities/enums) and the infrastructure layer (EF Core, repositories, JWT, email, cloud storage) are already scaffolded for every flow above — each teammate builds their own flow's `Features/` slice and `Controllers/` on top of this shared foundation without touching each other's code.
 
@@ -221,12 +221,13 @@ This repo is a **shared foundation**: the Domain/Infrastructure layers already m
 
 | Flow | Status | Controllers |
 |---|---|---|
-| Auth & Users | ⏳ Planned | — |
-| Events, Rounds & Tracks | ⏳ Planned | — |
-| Teams | ⏳ Planned | — |
-| **Submissions & Scoring** | ✅ Implemented | `SubmitResultsController`, `ScoresController`, `StorageController` |
-| **Results (calculate)** | ✅ Implemented | `FinalResultsController` (`CalculateRoundResults` only — Publish/Prize actions belong to the Results & Prizes flow and are not yet built) |
-| Results & Prizes (publish, assign prize) | ⏳ Planned | — |
+| **Auth & Users** | ✅ Implemented | `AuthController`, `UsersController`, `UserRejectionsController` |
+| **Events, Rounds & Tracks** | ✅ Implemented | `EventsController`, `RoundsController`, `TracksController` |
+| **Teams** | ✅ Implemented | `TeamsController` |
+| **Submissions & Scoring** | ✅ Implemented | `SubmitResultsController`, `ScoresController`, `ScoreDetailsController`, `StorageController` |
+| **Results, Prizes & Appeals** | ✅ Implemented | `FinalResultsController`, `PrizesController`, `AppealsController` |
+| **Event roles & invitations** | ✅ Implemented | `EventRolesController`, `EventCoordinatorsController`, `JudgesController`, `MentorsController` |
+| **Master data** | ✅ Implemented | `SchoolsController`, `TemplatesController`, `CriteriasController` |
 
 ## User Flow (Student / Team)
 

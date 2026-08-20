@@ -203,7 +203,8 @@ Ba handler dùng chung khuôn mẫu: nhập email → tự tạo `User` tạm n�
 - **File:** `SEAL.Application/Features/UserRejections/Commands/DeleteUserRejection/DeleteUserRejectionCommandHandler.cs:10-74`
 
 #### 1.4.4. Truy vấn (GetAllUserRejections / GetUserRejectionsByUserId)
-- ⚠️ Không kiểm tra quyền.
+- `GetAllUserRejections`: Admin hoặc EC còn hiệu lực (handler `UserRejectionAccessHelper`).
+- `GetUserRejectionsByUserId`: Admin, EC của sự kiện có liên quan tới user, hoặc chính user đó.
 
 ---
 
@@ -366,9 +367,15 @@ Kiến trúc: `Event (1) → Round (N) → Track (N) → Template (0..1) → Tem
 - **GetTeamById:** Bảo vệ PII — chỉ Admin/thành viên/EC thấy `Email`/`StudentCode`.
 - **GetMyTeam:** ⚠️ Model **thiếu field `LastRejectReason`** (có ở GetTeamById) — xem mục 6.
 - **GetTeamsList:** Phân trang, không lộ PII.
-- **GetMyTeamInvitation:** ⚠️ Không lọc `ExpiresAt > now` (khác GetTeamInvitations, có tính `effectiveStatus`).
+- **GetMyTeamInvitation:** Tính `effectiveStatus = Expired` khi `ExpiresAt` đã qua (cùng logic GetTeamInvitations).
 - **GetTeamInvitations:** `[EventRoleAuthorize(EC, TeamLeader)]`.
 - **GetMySubmissions:** Chỉ tính `EventRole` còn hiệu lực khi xác định đội của user.
+
+### 3.19. EC loại đội vi phạm (DisqualifyTeam)
+- **Ai:** EC hoặc Admin.
+- **Điều kiện:** Đội phải `Registered`; `Reason` bắt buộc.
+- **Kết quả:** `Status = Disqualified`, `IsActive = false`, lưu `LastRejectReason`; vô hiệu hóa bài nộp (`SubmitResult.IsActive = false`); xóa `FinalResult` nháp; ghi audit log + email Trưởng nhóm.
+- **File:** `Commands/DisqualifyTeam/DisqualifyTeamCommandHandler.cs`
 
 ### Sơ đồ trạng thái `TeamStatus`
 
@@ -389,12 +396,13 @@ enum: Forming=0, Registered=1, Disqualified=2, PendingApproval=3, Rejected=4
    │                 │
    │      ApproveTeamRegistration
    │                 ▼
-   └────────────  Registered
+   └────────────  Registered ──DisqualifyTeam──► Disqualified
 ```
 
 - `Forming`: duy nhất cho phép Add/Remove/Leave/Invite/Update/Delete (Leader tự làm được, không cần EC).
 - `PendingApproval`/`Registered`: khóa roster hoàn toàn; Update/Delete chỉ EC/Admin.
-- Enum có `Disqualified`/`Rejected` nhưng **không có handler nào trong 18 use case Teams set 2 giá trị này** — khả năng thuộc module xử lý vi phạm khác, hoặc dự phòng chưa triển khai.
+- `Disqualified`: EC/Admin loại đội đang thi (`DisqualifyTeam`).
+- `Rejected`: enum dự phòng — **không được handler gán**; từ chối duyệt đội quay về `Forming` + `LastRejectReason`.
 
 ---
 
@@ -529,46 +537,38 @@ TotalScore = Σ (Value / MaxScore × Weight/100) × 10   [làm tròn 2 chữ s�
 
 ## 6. Tổng hợp các vấn đề phát hiện được
 
-> **Cập nhật 2026-08-13:** File này ban đầu được copy nguyên từ repo `SU26_SWP_SE1907_BACKEND` (cùng gốc SEAL) chứ chưa từng khảo sát riêng cho `SU26_SWP_BL3W_BE`. Đã chạy lại 3 agent đọc trực tiếp code hiện tại của repo này (không suy đoán từ doc) để xác minh — **toàn bộ 18 mục dưới đây đều xác nhận có thật trên BL3W, y hệt mô tả**, và đã được vá. Ngoài ra phát hiện thêm 3 điều BL3W-specific, cũng đã xử lý:
-> - `UserRejectionsController` và `DemoController` bị **mất** `[Authorize]`/`[AdminAuthorize]` ngay trong lúc port code sang BL3W (commit `bd396dc`, 2026-08-13) — không phải lỗi kế thừa, đã vá lại.
-> - `StorageController` (Upload/Download file) hoàn toàn không có auth — lỗ hổng có thật, có ở cả 2 repo, chưa từng nằm trong danh sách gốc — đã thêm `[Authorize]`.
-> - `FptMockController` cũng không có auth nhưng là mock/stub test cho FE (dữ liệu giả cứng) — **cố ý không sửa**.
+> **Cập nhật 2026-08-20:** Phần lớn các mục 🔴/🟡 ban đầu (2026-08-13) **đã được vá** trên BL3W. Phiên bản này ghi lại trạng thái hiện tại và các hạng mục còn mở.
 
-Danh sách dưới đây tổng hợp mọi bất nhất/lỗ hổng cụ thể mà 5 agent khảo sát phát hiện được khi đọc trực tiếp code (không phải suy đoán). Xếp theo mức độ nghiêm trọng giảm dần.
+### ✅ Đã xử lý (tham chiếu nhanh)
 
-### 🔴 Nghiêm trọng — thiếu kiểm soát truy cập (Authorization)
-
-| # | Controller/Handler | Vấn đề | File |
-|---|---|---|---|
-| 1 | `PrizesController` | Toàn bộ action (Create/Update/Delete/List Prize) **không có `[Authorize]`** — mở cho người chưa đăng nhập | `SEAL_Backend/Controllers/PrizesController.cs` |
-| 2 | `UserRejectionsController` | Create/Update/List rejection không có `[Authorize]`; "phải là Admin" chỉ xác minh qua *dữ liệu* `RejectedBy`, không xác minh *người gọi* | `SEAL_Backend/Controllers/UserRejectionsController.cs`, `Commands/CreateUserRejection/CreateUserRejectionCommandHandler.cs:20-66` |
-| 3 | `DemoController` | `SetupDemoEvents`/`SetupDemoAppealEvent` không `[Authorize]` — người ngoài có thể gọi để xóa/tạo dữ liệu demo | `SEAL_Backend/Controllers/DemoController.cs` |
-| 4 | `GetAppealsByRound`/`GetAppealsByTeam`/`GetAssignedAppeals` | Chỉ cần đăng nhập, không kiểm tra người gọi có liên quan tới Round/Team/EventRole đang truy vấn hay không; `GetAssignedAppeals` tin tưởng `EventRoleId` client tự truyền, không đối chiếu `currentUserId` | `Queries/GetAppealsBy*/`, `Queries/GetAssignedAppeals/` |
-| 5 | `GetFinalResultById` | Không lọc `IsPublished` — user đăng nhập bất kỳ xem được bản nháp nếu biết Id | `Queries/GetFinalResultById/GetFinalResultByIdQueryHandler.cs` |
-
-### 🟡 Trung bình — bất đối xứng logic / race condition
-
-| # | Vấn đề | File |
+| # | Mục | Trạng thái |
 |---|---|---|
-| 6 | `AddTeamMemberCommandHandler` **không có** bước chống race-condition đầy đội (đếm-rồi-ghi TOCTOU) như `RespondTeamInvitationCommandHandler` đã có — 2 request `AddTeamMember` đồng thời có thể vượt quá 5 thành viên | `Commands/AddTeamMember/AddTeamMemberCommandHandler.cs:133-156` vs `Commands/RespondTeamInvitation/RespondTeamInvitationCommandHandler.cs:226-252` |
-| 7 | `AssignTemplateToTrackCommandHandler` không kiểm tra Track đã có `Score` hay chưa trước khi đổi Template — trong khi `UpdateTrackCommandHandler` có chặn trường hợp tương tự | `Commands/AssignTemplateToTrack/AssignTemplateToTrackCommandHandler.cs` vs `Commands/UpdateTrack/UpdateTrackCommandHandler.cs` |
-| 8 | `UpdatePrizeCommandHandler` không kiểm tra hạ `Quantity` xuống dưới số đã gán hiện tại → có thể tạo trạng thái vượt quota ngầm | `Commands/UpdatePrize/UpdatePrizeCommandHandler.cs` |
-| 9 | `DeletePrizeCommandHandler` không kiểm tra `FinalResult` đang tham chiếu `PrizeId` trước khi xóa → có thể để lại tham chiếu treo | `Commands/DeletePrize/DeletePrizeCommandHandler.cs` |
-| 10 | `AssignPrizeCommandHandler` không kiểm tra `Prize.EventId` khớp event của `FinalResult` đang gán | `Commands/AssignPrize/AssignPrizeCommandHandler.cs` |
-| 11 | `UpdateSchoolCommandHandler` không kiểm tra trùng tên (khác `CreateSchool` có kiểm tra) | `Commands/UpdateSchool/UpdateSchoolCommandHandler.cs` |
-| 12 | `SetupDemoAppealEventCommandHandler` không dọn dữ liệu demo cũ trước khi chạy (khác `SetupDemoEvents`) → gọi lặp tạo dữ liệu trùng | `Commands/SetupDemoAppealEvent/SetupDemoAppealEventCommandHandler.cs` |
+| 1 | `PrizesController` thiếu auth | ✅ `[AdminOrCoordinatorAuthorize]` |
+| 2 | `UserRejections` Create giả mạo Admin | ✅ Handler kiểm tra `currentUserId.IsAdmin`; set `CreatedBy` |
+| 3 | `DemoController` mở công khai | ✅ `[AdminAuthorize]` |
+| 4 | Appeals queries thiếu phân quyền | ✅ Handlers kiểm tra Admin/EC/team/judge; **2026-08-20:** thêm Admin bypass `GetAssignedAppeals` |
+| 5 | `GetFinalResultById` lộ nháp | ✅ Lọc `IsPublished` trừ Admin/EC |
+| 6 | Race `AddTeamMember` | ✅ Chống race sau SaveChanges |
+| 7 | `AssignTemplateToTrack` bỏ qua Score | ✅ Chặn khi Track đã có phiếu chấm |
+| 8–12 | Prize/School/Demo appeal guards | ✅ Đã vá |
+| 13–16 | Comment/field lệch pha | ✅ Transfer 24h, TeamInvitation 24h, `LastRejectReason` trên GetMyTeam, effectiveStatus GetMyTeamInvitation |
+| — | `DisqualifyTeam` | ✅ Module Teams mới (2026-08) |
+| — | UserRejections **đọc** quá mở | ✅ **2026-08-20:** GetAll chỉ Admin/EC; GetByUserId chỉ self/Admin/EC liên quan |
+| — | Ownership `UserRejection` sai field | ✅ **2026-08-20:** Update/Delete dùng `RejectedBy` (fallback `CreatedBy`) |
+| — | Criteria sửa khi đang chấm | ✅ **2026-08-20:** Update/Toggle chặn khi có `ScoreDetail` |
+| — | `DeleteRound` guard chưa đủ | ✅ **2026-08-20:** Chặn thêm khi có `FinalResult`/`Appeal` |
 
-### 🟢 Nhẹ — lệch pha comment/code, thiếu field (dễ gây hiểu nhầm khi bảo trì)
+### 🟡 Còn mở — thiết kế / cải tiến dài hạn
 
-| # | Vấn đề | File |
+| # | Vấn đề | Ghi chú |
 |---|---|---|
-| 13 | `TransferTeamLeaderCommandHandler`: comment ghi "chờ chấp nhận trong 7 ngày" nhưng hằng số thực tế là `TimeSpan.FromHours(24)` (24 giờ) | `Commands/TransferTeamLeader/TransferTeamLeaderCommandHandler.cs:21-22` |
-| 14 | `TeamInvitation.ExpiresAt`: doc-comment trên entity ghi "mặc định 48h" nhưng `InviteTeamMemberCommandHandler` dùng hằng số `INVITATION_EXPIRY_HOURS = 24` | `SEAL.Domain/Entity/TeamInvitation.cs:19` vs `Commands/InviteTeamMember/InviteTeamMemberCommandHandler.cs:23` |
-| 15 | `MyTeamResponseModel` (dùng bởi `GetMyTeam`) thiếu field `LastRejectReason` mà `TeamDetailResponseModel` (`GetTeamById`) có — FE gọi `/my-team` không hiện được banner lý do bị từ chối như thiết kế | `Queries/GetMyTeam/Models/MyTeamResponseModel.cs` vs `Queries/GetTeamById/Models/TeamDetailResponseModel.cs:16-20` |
-| 16 | `GetMyTeamInvitationQueryHandler` không lọc `ExpiresAt > now` — có thể trả về lời mời đã hết hạn nhưng chưa "lazy-expire" với `Status = "PendingAccept"`, trong khi `GetTeamInvitationsQueryHandler` tính `effectiveStatus` đúng | `Queries/GetMyTeamInvitation/GetMyTeamInvitationQueryHandler.cs:35-41` vs `Queries/GetTeamInvitations/GetTeamInvitationsQueryHandler.cs:51-56` |
-| 17 | `DeleteUserRejectionCommandHandler`: XML-doc endpoint ghi "Soft Delete" nhưng thực chất là xóa cứng (`_dbSet.Remove`) | `Commands/DeleteUserRejection/DeleteUserRejectionCommandHandler.cs` |
-| 18 | Nhiều controller khác cũng ghi "(Soft Delete)" trong XML-doc dù toàn bộ `GenericRepository.DeleteAsync` là hard-delete; trường `DeletedTime` tồn tại nhưng không có `HasQueryFilter` nào áp dụng trong `DatabaseContext` | `SEAL.Infrastructure/Persistence/Repositories/GenericRepository.cs:235-239` |
+| A | Tài khoản tạm (`IsTemporary`) không được dọn dẹp | User tạo khi mời email nhưng không accept → tích lũy trong DB |
+| B | `AdminOrCoordinatorAuthorize` phạm vi toàn cục | EC event A có thể CRUD Template/Prize nếu biết URL — cân nhắc giới hạn theo event |
+| C | `CreateEvent` cho phép bất kỳ EC cũ nào tạo event mới | Có thể là chủ đích (BTC kinh nghiệm) hoặc cần siết chỉ Admin |
+| D | Cửa sổ phúc khảo chỉ theo `Round`, không fallback `Track` | Khác submission/scoring (Track ?? Round) |
+| E | Soft delete vs hard delete | `DeletedTime` tồn tại nhưng `GenericRepository.DeleteAsync` xóa cứng; doc controller vẫn ghi nhầm "Soft Delete" ở vài chỗ |
+| F | `TeamStatus.Rejected` enum dự phòng | Không handler gán — dùng `Forming` + `LastRejectReason` thay thế |
 
 ### Ghi chú
-- Mục 1–5, 6-11 đã được các agent xác nhận qua đọc trực tiếp code — **không phải suy đoán**.
-- Đề xuất ưu tiên xử lý: nhóm 🔴 trước (đặc biệt #1–#3, vì đây là các API có khả năng ghi/xóa dữ liệu mà không cần đăng nhập), sau đó #6 (race condition đội) vì đã có pattern chuẩn sẵn ở `RespondTeamInvitation` để tái sử dụng.
+- Khi sửa handler, luôn kiểm tra **cả controller filter lẫn handler** — auth có thể nằm ở một trong hai tầng.
+- Pattern chống race chuẩn: đếm lại sau `SaveChanges`, giữ bản ghi `CreatedTime`/`Id` sớm nhất.
