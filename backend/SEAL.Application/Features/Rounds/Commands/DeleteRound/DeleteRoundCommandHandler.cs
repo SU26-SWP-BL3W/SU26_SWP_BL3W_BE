@@ -1,7 +1,9 @@
 using MediatR;
+using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -62,6 +64,25 @@ namespace SEAL_Application.Features.Rounds.Commands.DeleteRound
             {
                 return BaseException.BadRequestInvaildInputResponse(
                     "Không thể xóa vòng thi đã có bài nộp. Vui lòng xóa/di chuyển các bài nộp trước.");
+            }
+
+            var hasFinalResults = await _unitOfWork.GetRepository<FinalResult>()
+                .AnyAsync(fr => fr.RoundId == round.Id, cancellationToken);
+            if (hasFinalResults)
+            {
+                return BaseException.BadRequestInvaildInputResponse(
+                    "Không thể xóa vòng thi đã có kết quả tính toán. Vui lòng hủy kết quả trước.");
+            }
+
+            var hasAppeals = await (
+                from a in _unitOfWork.GetRepository<Appeal>().Entities
+                join sr in _unitOfWork.GetRepository<SubmitResult>().Entities on a.SubmitResultId equals sr.Id
+                where sr.RoundId == round.Id
+                select a).AnyAsync(cancellationToken);
+            if (hasAppeals)
+            {
+                return BaseException.BadRequestInvaildInputResponse(
+                    "Không thể xóa vòng thi đã có đơn phúc khảo. Vui lòng xử lý các đơn phúc khảo trước.");
             }
 
             // 3. Xóa cứng thực thể (Cascade delete các Track liên quan sẽ tự động chạy trong DB)

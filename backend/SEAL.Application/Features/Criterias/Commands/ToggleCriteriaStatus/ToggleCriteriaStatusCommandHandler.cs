@@ -1,4 +1,5 @@
 using MediatR;
+using SEAL_Application.Features.Criterias;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
@@ -24,6 +25,12 @@ namespace SEAL_Application.Features.Criterias.Commands.ToggleCriteriaStatus
             if (criteria == null)
             {
                 return BaseException.BadRequestNotFoundResponse($"Tiêu chí có ID '{request.Id}' không tồn tại.");
+            }
+
+            if (await CriteriaUsageHelper.IsUsedInScoringAsync(_unitOfWork, request.Id, cancellationToken))
+            {
+                return BaseException.BadRequestInvaildInputResponse(
+                    "Tiêu chí này đã được dùng để chấm điểm nên không thể bật/tắt trạng thái.");
             }
 
             // 2. Toggle trạng thái
