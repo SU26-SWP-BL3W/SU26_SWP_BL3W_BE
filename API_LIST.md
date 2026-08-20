@@ -515,7 +515,7 @@ Tất cả các API ngoại trừ file stream/download đều bọc kết quả 
 
 ### 6.4 Đội thi Gửi Đơn Phúc khảo (Create Appeal)
 - **Endpoint**: `POST /api/Appeals`
-- **Auth**: `Authorize` (Thành viên đội thi)
+- **Auth**: `Authorize` (**chỉ Trưởng nhóm / TeamLeader** của đội sở hữu bài nộp)
 - **Request Body**:
 ```json
 {
@@ -556,9 +556,9 @@ Tất cả các API ngoại trừ file stream/download đều bọc kết quả 
 - `GET /api/Schools`: Lấy danh sách tất cả các trường học trong hệ thống.
 - `GET /api/Schools/with-user-count`: Lấy danh sách trường kèm số lượng sinh viên tham gia.
 
-### 7.2 Mock Tra cứu Sinh viên FPT (FPT Verification Service)
-- **Endpoint**: `GET /api/fpt-mock/students/{studentCode}`
-- **Public Sandbox Data để Test**:
+### 7.2 Tra cứu Sinh viên FPT (FPT Verification Service)
+- **Endpoint**: `GET /api/FptStudents/{studentCode}` (yêu cầu `Authorize` — backend gọi nội bộ khi nộp hồ sơ SV FPT)
+- **Mock dữ liệu test** (dùng khi chạy local với FPT mock service):
   - `SE123456` - Nguyễn Văn A (Chuyên ngành SE - K17)
   - `SE789012` - Trần Thị B (Chuyên ngành SE - K18)
   - `CS001122` - Lê Văn C (Chuyên ngành CS - K17)

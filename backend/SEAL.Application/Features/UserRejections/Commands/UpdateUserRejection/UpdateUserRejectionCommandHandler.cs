@@ -5,6 +5,7 @@ using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
 using SEAL_Domain.Ultis;
 using SEAL_Application.Features.UserRejections.Commands.UpdateUserRejection.Models;
+using SEAL_Application.Features.UserRejections;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -39,7 +40,7 @@ namespace SEAL_Application.Features.UserRejections.Commands.UpdateUserRejection
 
             var currentUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(currentUserId);
             bool isAdmin = currentUser != null && currentUser.IsAdmin;
-            bool isOwner = userRejection.CreatedBy == currentUserId;
+            bool isOwner = UserRejectionAccessHelper.IsRejectionOwner(userRejection, currentUserId);
 
             if (!isAdmin && !isOwner)
             {
