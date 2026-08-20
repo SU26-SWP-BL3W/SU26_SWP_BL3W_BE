@@ -103,6 +103,7 @@ namespace SEAL_Application.Features.Users.Commands.RejectUser
             {
                 UserId = userToReject.Id,
                 RejectedBy = currentUserId,
+                CreatedBy = currentUserId,
                 Reason = request.Reason,
                 IsActive = true
             };

@@ -20,7 +20,10 @@ namespace SEAL_Domain.Entity.Enums
         /// <summary>Đội đã chốt danh sách (bị khóa), đang CHỜ EC/Admin duyệt.</summary>
         PendingApproval = 3,
 
-        /// <summary>Đội bị từ chối duyệt.</summary>
+        /// <summary>
+        /// Dự phòng — hiện KHÔNG được handler nào gán. Từ chối duyệt đội dùng
+        /// <c>Forming</c> + <c>LastRejectReason</c> (RejectTeamRegistration).
+        /// </summary>
         Rejected = 4
     }
 }

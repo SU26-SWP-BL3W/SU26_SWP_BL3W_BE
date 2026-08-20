@@ -44,11 +44,13 @@ namespace SEAL_Application.Features.Appeals.Queries.GetAssignedAppeals
                 return new BaseException.ForbiddenException("Bạn không có quyền xem danh sách phúc khảo này.");
             }
 
+            var currentUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(currentUserId);
+            bool isAdmin = currentUser != null && currentUser.IsAdmin;
             bool isOwnRole = eventRole.UserId == currentUserId;
-            bool isCoordinator = !isOwnRole && await _eventRoleChecker.HasRoleAsync(
+            bool isCoordinator = !isOwnRole && !isAdmin && await _eventRoleChecker.HasRoleAsync(
                 currentUserId, eventRole.EventId, new[] { EventRoleType.EventCoordinator }, cancellationToken);
 
-            if (!isOwnRole && !isCoordinator)
+            if (!isAdmin && !isOwnRole && !isCoordinator)
             {
                 return new BaseException.ForbiddenException("Bạn không có quyền xem danh sách phúc khảo này.");
             }

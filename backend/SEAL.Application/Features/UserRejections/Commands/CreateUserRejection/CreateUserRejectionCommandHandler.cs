@@ -48,6 +48,7 @@ namespace SEAL_Application.Features.UserRejections.Commands.CreateUserRejection
             {
                 UserId = request.Model.UserId,
                 RejectedBy = currentUserId,
+                CreatedBy = currentUserId,
                 Reason = request.Model.Reason
             };
 
