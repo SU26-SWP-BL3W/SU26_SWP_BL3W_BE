@@ -19,15 +19,18 @@ namespace SEAL_Application.Features.Users.Commands.ApproveUser
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
+        private readonly INotificationService _notifications;
 
         public ApproveUserCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
-            IEventRoleChecker eventRoleChecker)
+            IEventRoleChecker eventRoleChecker,
+            INotificationService notifications)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
+            _notifications = notifications;
         }
 
         public async Task<Result<UserModel>> Handle(ApproveUserCommand request, CancellationToken cancellationToken)
@@ -86,6 +89,15 @@ namespace SEAL_Application.Features.Users.Commands.ApproveUser
             //    Nay xét duyệt ở cấp ĐỘI THI: đội tự chốt danh sách (-> PendingApproval) rồi
             //    EC/Admin duyệt qua ApproveTeamRegistration. Giữ lại đây sẽ nhảy cóc bước duyệt đội.
 
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _notifications.NotifyAsync(
+                userToApprove.Id,
+                "Hồ sơ đã được duyệt",
+                "Hồ sơ sinh viên của bạn đã được Ban Tổ Chức phê duyệt. Bạn có thể tham gia các sự kiện hackathon ngay bây giờ.",
+                "success",
+                "/profile",
+                cancellationToken);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return new UserModel
