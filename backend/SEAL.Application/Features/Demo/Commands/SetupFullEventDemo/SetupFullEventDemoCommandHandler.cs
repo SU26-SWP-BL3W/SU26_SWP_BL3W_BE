@@ -146,7 +146,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 EventId = fullEvent.Id,
                 RoundName = "Vòng Sơ Loại (Preliminary Round)",
                 RoundNumber = 1,
-                AdvancementRule = "top:3",
+                AdvancementRule = "top:2", // DEMO thăng vòng: track Web 3 đội -> top 2 vào tiếp, 1 đội rớt
                 StartDate = targetDate.AddDays(-25),
                 EndDate = targetDate.AddDays(-5),
                 ScoringStartDate = targetDate.AddDays(-4),
@@ -200,6 +200,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             var ecUser = await GetOrCreateUserAsync("ec_full@yopmail.com", "Nguyễn Văn Điều Phối", false, false, school.Id, cancellationToken);
             var judge1 = await GetOrCreateUserAsync("judge1_full@yopmail.com", "TS. Trần Giám Khảo AI", false, false, school.Id, cancellationToken);
             var judge2 = await GetOrCreateUserAsync("judge2_full@yopmail.com", "ThS. Lê Giám Khảo Web", false, false, school.Id, cancellationToken);
+            var judge3 = await GetOrCreateUserAsync("judge3_full@yopmail.com", "TS. Vũ Giám Khảo AI 2", false, false, school.Id, cancellationToken);
             var mentor1 = await GetOrCreateUserAsync("mentor1_full@yopmail.com", "KSC. Phạm Cố Vấn ML", false, false, school.Id, cancellationToken);
             var mentor2 = await GetOrCreateUserAsync("mentor2_full@yopmail.com", "KSC. Hoàng Cố Vấn App", false, false, school.Id, cancellationToken);
 
@@ -224,11 +225,13 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             // 9. Gán Vai trò Sự kiện (EventRoles) cho Ban tổ chức / Chuyên gia
             var ecRole = new EventRole { UserId = ecUser.Id, EventId = fullEvent.Id, RoleName = EventRoleType.EventCoordinator, ExpiredAt = fullEvent.EndDate, Notes = "Trưởng ban điều phối sự kiện" };
             var judge1Role = new EventRole { UserId = judge1.Id, EventId = fullEvent.Id, TrackId = track1.Id, RoleName = EventRoleType.Judge, ExpiredAt = fullEvent.EndDate, Notes = "Giám khảo chính Track AI" };
+            // DEMO: judge3 cùng chấm Track AI với judge1 -> minh hoạ "2 giám khảo/track -> điểm trung bình + đủ phiếu".
+            var judge3Role = new EventRole { UserId = judge3.Id, EventId = fullEvent.Id, TrackId = track1.Id, RoleName = EventRoleType.Judge, ExpiredAt = fullEvent.EndDate, Notes = "Giám khảo phụ Track AI" };
             var judge2Role = new EventRole { UserId = judge2.Id, EventId = fullEvent.Id, TrackId = track2.Id, RoleName = EventRoleType.Judge, ExpiredAt = fullEvent.EndDate, Notes = "Giám khảo chính Track Web/App" };
             var mentor1Role = new EventRole { UserId = mentor1.Id, EventId = fullEvent.Id, TrackId = track1.Id, RoleName = EventRoleType.Mentor, ExpiredAt = fullEvent.EndDate, Notes = "Cố vấn kỹ thuật AI" };
             var mentor2Role = new EventRole { UserId = mentor2.Id, EventId = fullEvent.Id, TrackId = track2.Id, RoleName = EventRoleType.Mentor, ExpiredAt = fullEvent.EndDate, Notes = "Cố vấn phát triển sản phẩm" };
 
-            await _unitOfWork.GetRepository<EventRole>().AddRangeAsync(new[] { ecRole, judge1Role, judge2Role, mentor1Role, mentor2Role });
+            await _unitOfWork.GetRepository<EventRole>().AddRangeAsync(new[] { ecRole, judge1Role, judge3Role, judge2Role, mentor1Role, mentor2Role });
 
             // 10. Tạo 5 Đội thi (Teams)
             var team1 = new Team { EventId = fullEvent.Id, TrackId = track1.Id, Name = "AI Titans", Description = "Dự án Phân loại rác thông minh tự động bằng AI", Status = TeamStatus.Registered };
@@ -236,8 +239,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             var team3 = new Team { EventId = fullEvent.Id, TrackId = track2.Id, Name = "Green Tech", Description = "Ứng dụng Chia sẻ phương tiện di chuyển xanh Eco-Transport", Status = TeamStatus.Registered };
             var team4 = new Team { EventId = fullEvent.Id, TrackId = track2.Id, Name = "Quantum Leap", Description = "Nền tảng Tối ưu năng lượng thông minh cho Tòa nhà", Status = TeamStatus.Registered };
             var team5 = new Team { EventId = fullEvent.Id, TrackId = track2.Id, Name = "Future Builders", Description = "Hệ thống IoT Quan trắc và Cảnh báo ô nhiễm nguồn nước", Status = TeamStatus.Registered };
+            // DEMO đội bị loại: KHÔNG vào bảng xếp hạng, KHÔNG bị đòi phiếu chấm (bị lọc ở CalculateRoundResults).
+            var team6 = new Team { EventId = fullEvent.Id, TrackId = track2.Id, Name = "Ghost Coders", Description = "Đội vi phạm quy chế (nộp bài đạo nhái) — đã bị loại để minh hoạ.", Status = TeamStatus.Disqualified };
 
-            await _unitOfWork.GetRepository<Team>().AddRangeAsync(new[] { team1, team2, team3, team4, team5 });
+            await _unitOfWork.GetRepository<Team>().AddRangeAsync(new[] { team1, team2, team3, team4, team5, team6 });
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // 11. Gán Leader & Thành viên cho 5 Đội
@@ -361,9 +366,13 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             var score2 = new Score { EventRoleId = judge1Role.Id, SubmitResultId = submit2.Id, TotalScore = 8.50m, Comment = "Giải pháp có ý nghĩa bảo vệ môi trường cao, kiến trúc kỹ thuật tương đối hoàn thiện.", IsSubmitted = true };
             var score3 = new Score { EventRoleId = judge2Role.Id, SubmitResultId = submit3.Id, TotalScore = 9.00m, Comment = "Sản phẩm hoàn thiện cao, giao diện đẹp và tính khả thi áp dụng thực tế rất lớn.", IsSubmitted = true };
             var score4 = new Score { EventRoleId = judge2Role.Id, SubmitResultId = submit4.Id, TotalScore = 8.25m, Comment = "Hệ thống vận hành tốt, giải quyết tốt bài toán năng lượng.", IsSubmitted = true };
+            // DEMO 2 GIÁM KHẢO / TRACK AI: judge3 chấm CÙNG submit1+submit2 với judge1 (điểm KHÁC nhau)
+            // -> khi tính điểm sẽ lấy TRUNG BÌNH 2 giám khảo (vd submit1: 9.25 & 8.75 -> 9.00).
+            var score1b = new Score { EventRoleId = judge3Role.Id, SubmitResultId = submit1.Id, TotalScore = 8.75m, Comment = "Ý tưởng tốt nhưng phần đánh giá độ chính xác mô hình cần dữ liệu kiểm thử rộng hơn.", IsSubmitted = true };
+            var score2b = new Score { EventRoleId = judge3Role.Id, SubmitResultId = submit2.Id, TotalScore = 9.10m, Comment = "Kiến trúc cảm biến + vệ tinh rất chắc, khả năng triển khai thực địa cao.", IsSubmitted = true };
             // DEMO LIVE: CHỪA submit5 (đội Future Builders) CHƯA chấm — để giám khảo judge2_full chấm TRỰC TIẾP trước mặt thầy.
 
-            await _unitOfWork.GetRepository<Score>().AddRangeAsync(new[] { score1, score2, score3, score4 });
+            await _unitOfWork.GetRepository<Score>().AddRangeAsync(new[] { score1, score2, score3, score4, score1b, score2b });
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // Tạo chi tiết điểm (ScoreDetails) theo 4 tiêu chí
@@ -372,7 +381,9 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 (score1, new[] { 9.5m, 9.0m, 9.5m, 9.0m }),
                 (score2, new[] { 8.5m, 8.5m, 8.5m, 8.5m }),
                 (score3, new[] { 9.0m, 9.0m, 9.0m, 9.0m }),
-                (score4, new[] { 8.5m, 8.0m, 8.5m, 8.0m })
+                (score4, new[] { 8.5m, 8.0m, 8.5m, 8.0m }),
+                (score1b, new[] { 8.5m, 9.0m, 8.5m, 9.0m }),
+                (score2b, new[] { 9.0m, 9.0m, 9.5m, 9.0m })
             };
 
             var scoreDetailsList = new List<ScoreDetail>();
@@ -427,7 +438,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 Accounts = new
                 {
                     EventCoordinator = "ec_full@yopmail.com (Pass: 123456)",
-                    Judges = new[] { "judge1_full@yopmail.com (Pass: 123456)", "judge2_full@yopmail.com (Pass: 123456)" },
+                    Judges = new[] { "judge1_full@yopmail.com + judge3_full@yopmail.com (2 GK Track AI)", "judge2_full@yopmail.com (Track Web)", "Pass tất cả: 123456" },
                     Mentors = new[] { "mentor1_full@yopmail.com (Pass: 123456)", "mentor2_full@yopmail.com (Pass: 123456)" },
                     Students = "student1@yopmail.com đến student25@yopmail.com (Pass: 123456)"
                 },
