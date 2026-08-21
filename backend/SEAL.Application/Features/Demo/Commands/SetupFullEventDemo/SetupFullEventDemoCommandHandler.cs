@@ -150,7 +150,8 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 StartDate = targetDate.AddDays(-25),
                 EndDate = targetDate.AddDays(-5),
                 ScoringStartDate = targetDate.AddDays(-4),
-                ScoringEndDate = targetDate.AddDays(-1),
+                // DEMO LIVE: mở cửa sổ chấm tới +7 ngày để giám khảo chấm trực tiếp
+                ScoringEndDate = targetDate.AddDays(7),
                 AppealStartDate = targetDate.AddDays(-1),
                 AppealEndDate = targetDate.AddDays(3)
             };
@@ -178,7 +179,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 StartDate = targetDate.AddDays(-25),
                 EndDate = targetDate.AddDays(-5),
                 ScoringStartDate = targetDate.AddDays(-4),
-                ScoringEndDate = targetDate.AddDays(-1)
+                ScoringEndDate = targetDate.AddDays(7) // DEMO LIVE: mở cửa sổ chấm tới +7 ngày để giám khảo chấm trực tiếp
             };
             var track2 = new Track
             {
@@ -190,7 +191,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 StartDate = targetDate.AddDays(-25),
                 EndDate = targetDate.AddDays(-5),
                 ScoringStartDate = targetDate.AddDays(-4),
-                ScoringEndDate = targetDate.AddDays(-1)
+                ScoringEndDate = targetDate.AddDays(7) // DEMO LIVE: mở cửa sổ chấm tới +7 ngày để giám khảo chấm trực tiếp
             };
             await _unitOfWork.GetRepository<Track>().AddRangeAsync(new[] { track1, track2 });
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -360,9 +361,9 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             var score2 = new Score { EventRoleId = judge1Role.Id, SubmitResultId = submit2.Id, TotalScore = 8.50m, Comment = "Giải pháp có ý nghĩa bảo vệ môi trường cao, kiến trúc kỹ thuật tương đối hoàn thiện.", IsSubmitted = true };
             var score3 = new Score { EventRoleId = judge2Role.Id, SubmitResultId = submit3.Id, TotalScore = 9.00m, Comment = "Sản phẩm hoàn thiện cao, giao diện đẹp và tính khả thi áp dụng thực tế rất lớn.", IsSubmitted = true };
             var score4 = new Score { EventRoleId = judge2Role.Id, SubmitResultId = submit4.Id, TotalScore = 8.25m, Comment = "Hệ thống vận hành tốt, giải quyết tốt bài toán năng lượng.", IsSubmitted = true };
-            var score5 = new Score { EventRoleId = judge2Role.Id, SubmitResultId = submit5.Id, TotalScore = 7.80m, Comment = "Ý tưởng tốt, cần đầu tư trau chuốt thêm phần giao diện người dùng.", IsSubmitted = true };
+            // DEMO LIVE: CHỪA submit5 (đội Future Builders) CHƯA chấm — để giám khảo judge2_full chấm TRỰC TIẾP trước mặt thầy.
 
-            await _unitOfWork.GetRepository<Score>().AddRangeAsync(new[] { score1, score2, score3, score4, score5 });
+            await _unitOfWork.GetRepository<Score>().AddRangeAsync(new[] { score1, score2, score3, score4 });
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // Tạo chi tiết điểm (ScoreDetails) theo 4 tiêu chí
@@ -371,8 +372,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 (score1, new[] { 9.5m, 9.0m, 9.5m, 9.0m }),
                 (score2, new[] { 8.5m, 8.5m, 8.5m, 8.5m }),
                 (score3, new[] { 9.0m, 9.0m, 9.0m, 9.0m }),
-                (score4, new[] { 8.5m, 8.0m, 8.5m, 8.0m }),
-                (score5, new[] { 8.0m, 7.5m, 8.0m, 7.5m })
+                (score4, new[] { 8.5m, 8.0m, 8.5m, 8.0m })
             };
 
             var scoreDetailsList = new List<ScoreDetail>();
@@ -391,14 +391,9 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             }
             await _unitOfWork.GetRepository<ScoreDetail>().AddRangeAsync(scoreDetailsList);
 
-            // 15. Kết quả xếp hạng & Công bố (FinalResults)
-            var fr1 = new FinalResult { EventId = fullEvent.Id, RoundId = round1.Id, TeamId = team1.Id, PrizeId = prize1.Id, FinalScore = 9.25m, Rank = 1, IsAdvanced = true, IsPublished = true };
-            var fr3 = new FinalResult { EventId = fullEvent.Id, RoundId = round1.Id, TeamId = team3.Id, PrizeId = prize2.Id, FinalScore = 9.00m, Rank = 2, IsAdvanced = true, IsPublished = true };
-            var fr2 = new FinalResult { EventId = fullEvent.Id, RoundId = round1.Id, TeamId = team2.Id, PrizeId = prize3.Id, FinalScore = 8.50m, Rank = 3, IsAdvanced = true, IsPublished = true };
-            var fr4 = new FinalResult { EventId = fullEvent.Id, RoundId = round1.Id, TeamId = team4.Id, PrizeId = prize4.Id, FinalScore = 8.25m, Rank = 4, IsAdvanced = false, IsPublished = true };
-            var fr5 = new FinalResult { EventId = fullEvent.Id, RoundId = round1.Id, TeamId = team5.Id, PrizeId = null, FinalScore = 7.80m, Rank = 5, IsAdvanced = false, IsPublished = true };
-
-            await _unitOfWork.GetRepository<FinalResult>().AddRangeAsync(new[] { fr1, fr3, fr2, fr4, fr5 });
+            // 15. DEMO LIVE: KHÔNG tạo sẵn FinalResults. Lý do bắt buộc: nếu vòng đã có FinalResult,
+            //     SaveScore sẽ KHÓA chấm điểm (roundPublished) -> giám khảo không chấm live được.
+            //     Để EC tự bấm "TÍNH ĐIỂM TỰ ĐỘNG" + "CÔNG BỐ KẾT QUẢ" trước mặt thầy (sau khi đóng vòng).
 
             // 16. Đơn Phúc khảo (Appeal)
             var appeal = new Appeal
