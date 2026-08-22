@@ -35,7 +35,10 @@ namespace SEAL_Backend.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Upload(
-            [FromForm] IFormFile? file,
+            // Khong dat [FromForm] truc tiep len IFormFile: Swashbuckle nem
+            // SwaggerGeneratorException khi sinh doc (hong ca /swagger/v1/swagger.json).
+            // IFormFile van duoc ASP.NET Core tu bind tu multipart form -> hanh vi y het.
+            IFormFile? file,
             [FromQuery] string folder = "general",
             CancellationToken cancellationToken = default)
         {
