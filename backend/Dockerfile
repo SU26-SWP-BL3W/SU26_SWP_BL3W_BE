@@ -24,4 +24,7 @@ WORKDIR /app
 COPY --from=publish /app/publish .
 EXPOSE 8080
 EXPOSE 8081
+# Tranh FileSystemWatcher/inotify tren Render Free (limit 128) — xem Program.cs comment.
+ENV DOTNET_HOSTBUILDER_RELOADCONFIGONCHANGE=false
+ENV DOTNET_USE_POLLING_FILE_WATCHER=1
 ENTRYPOINT ["dotnet", "SEAL_Backend.dll"]
