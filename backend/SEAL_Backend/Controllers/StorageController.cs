@@ -30,14 +30,19 @@ namespace SEAL_Backend.Controllers
         /// <param name="cancellationToken">Token hủy tác vụ.</param>
         /// <returns>Đường dẫn URL truy cập trực tiếp file.</returns>
         [HttpPost("upload")]
+        [Consumes("multipart/form-data")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Upload(
-            IFormFile file,
+            [FromForm] IFormFile? file,
             [FromQuery] string folder = "general",
             CancellationToken cancellationToken = default)
         {
+            file ??= Request.HasFormContentType && Request.Form.Files.Count > 0
+                ? (Request.Form.Files["file"] ?? Request.Form.Files[0])
+                : null;
+
             if (file == null || file.Length == 0)
             {
                 return BadRequest("Tệp tin không được để trống.");

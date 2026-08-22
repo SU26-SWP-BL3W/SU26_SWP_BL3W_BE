@@ -67,8 +67,9 @@ builder.Services.AddHttpClient<IGitHostingService, GitHostingService>(client =>
 // ma khong can key that (thuong chi ton tai tren Render production). Set key S3 that
 // vao appsettings.Development.json (gitignored) se tu dong chuyen ve dung CloudFly that.
 var s3AccessKey = builder.Configuration.GetSection("S3").GetValue<string>("AccessKeyId");
-var useLocalStorage = builder.Environment.IsDevelopment()
-    && (string.IsNullOrWhiteSpace(s3AccessKey) || s3AccessKey.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase));
+var useLocalStorage = string.IsNullOrWhiteSpace(s3AccessKey)
+    || s3AccessKey.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase)
+    || builder.Environment.IsDevelopment();
 
 if (useLocalStorage)
 {
