@@ -81,13 +81,17 @@ namespace SEAL_Application.Features.SubmitResults.Commands.DeleteSubmitResult
             }
 
             // Không cho XÓA bài nộp sau khi kết quả vòng đã được tính/công bố.
+            var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(submitResult.TrackId);
             var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(submitResult.RoundId);
             if (round != null)
             {
                 var nowUtc = DateTime.UtcNow;
-                if (nowUtc < round.StartDate || nowUtc > round.EndDate)
+                var effectiveStartDate = track?.StartDate ?? round.StartDate;
+                var effectiveEndDate = track?.EndDate ?? round.EndDate;
+
+                if (nowUtc < effectiveStartDate || nowUtc > effectiveEndDate)
                 {
-                    return BaseException.BadRequestInvaildInputResponse("Ngoài thời gian vòng thi nên không thể xóa bài nộp.");
+                    return BaseException.BadRequestInvaildInputResponse("Ngoài thời gian hạng mục mở nên không thể xóa bài nộp.");
                 }
             }
 

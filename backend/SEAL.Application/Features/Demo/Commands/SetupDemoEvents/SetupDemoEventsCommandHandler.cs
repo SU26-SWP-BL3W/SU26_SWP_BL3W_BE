@@ -30,12 +30,12 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             var targetDate = request.TargetDate.ToUniversalTime();
 
             // Demo seeding config (tránh hard-code trực tiếp trong logic tạo demo)
-            var mentorEmail = _configuration.GetValue<string>("DemoSeed:MentorEmail") ?? "mentor.ai@seal.edu.vn";
             var targetTrackName = _configuration.GetValue<string>("DemoSeed:TargetTrackName") ?? "Phần mềm nâng cao";
 
             // 1. Dọn dẹp Demo Events cũ (nếu có) để không bị rác khi ấn nhiều lần
             var oldEvents = await _unitOfWork.GetRepository<Event>().Entities
-                .Where(e => e.EventName.StartsWith("[DEMO]"))
+                .Where(e => e.EventName.StartsWith("[DEMO] Sự kiện Nộp Bài")
+                         || e.EventName.StartsWith("[DEMO] Sự kiện Chấm Điểm"))
                 .ToListAsync(cancellationToken);
             
             if (oldEvents.Any())
@@ -77,6 +77,8 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
 
             var ecUser = await GetOrCreateUserAsync("ec_demo@yopmail.com", "EC Demo", false, false, schoolId, cancellationToken);
             var judgeUser = await GetOrCreateUserAsync("judge_demo@yopmail.com", "Judge Demo", false, false, schoolId, cancellationToken);
+            var judge2User = await GetOrCreateUserAsync("judge2_demo@yopmail.com", "Judge 2 Demo", false, false, schoolId, cancellationToken);
+            var mentorUser = await GetOrCreateUserAsync("mentor_demo@yopmail.com", "Mentor Demo", false, false, schoolId, cancellationToken);
             var student1 = await GetOrCreateUserAsync("student1_demo@yopmail.com", "Student 1 Demo", false, true, schoolId, cancellationToken, "SE111111", true, "https://s3.cloudfly.vn/rhymo-bucket/general/e188d675-d952-422f-a536-7bac6a1edc22.jpg");
             var student2 = await GetOrCreateUserAsync("student2_demo@yopmail.com", "Student 2 Demo", false, true, schoolId, cancellationToken, "SE222222", true, "https://s3.cloudfly.vn/rhymo-bucket/general/e188d675-d952-422f-a536-7bac6a1edc22.jpg");
             var student3 = await GetOrCreateUserAsync("student3_demo@yopmail.com", "Student 3 Demo", false, true, schoolId, cancellationToken, "SE333333", true, "https://s3.cloudfly.vn/rhymo-bucket/general/e188d675-d952-422f-a536-7bac6a1edc22.jpg");
@@ -107,8 +109,8 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
                 RoundName = "Vòng chung kết",
                 RoundNumber = 1,
                 AdvancementRule = "top:10",
-                StartDate = targetDate.AddDays(-10),
-                EndDate = targetDate.AddDays(10),
+                StartDate = targetDate.AddDays(-2),
+                EndDate = targetDate.AddDays(2),
             };
             await _unitOfWork.GetRepository<Round>().AddAsync(round1);
 
@@ -164,7 +166,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
                 RoundNumber = 1,
                 AdvancementRule = "percent:50",
                 StartDate = targetDate.AddDays(-25),
-                EndDate = targetDate.AddDays(10),
+                EndDate = targetDate.AddDays(-3),
                 ScoringStartDate = targetDate.AddDays(-2),
                 ScoringEndDate = targetDate.AddDays(5)
             };
@@ -252,17 +254,11 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             // Phân quyền EC cho event 2
             await AddEventRoleAsync(ecUser.Id, event2.Id, null, null, EventRoleType.EventCoordinator, event2.EndDate);
 
-            // Phân quyền cho event 2: Giám khảo cho track 2 (Thiết kế), Cố vấn cho track 5 (demo)
+            // 2 GK cùng track Thiết kế (trung bình phiếu) + Mentor cùng track đang chấm.
             await AddEventRoleAsync(judgeUser.Id, event2.Id, null, track2.Id, EventRoleType.Judge, event2.EndDate);
+            await AddEventRoleAsync(judge2User.Id, event2.Id, null, track2.Id, EventRoleType.Judge, event2.EndDate);
+            await AddEventRoleAsync(mentorUser.Id, event2.Id, null, track2.Id, EventRoleType.Mentor, event2.EndDate);
 
-            var mentorUser = await _unitOfWork.GetRepository<User>().Entities
-                .FirstOrDefaultAsync(u => u.Email == mentorEmail, cancellationToken);
-            if (mentorUser != null)
-            {
-                await AddEventRoleAsync(mentorUser.Id, event2.Id, null, track5.Id, EventRoleType.Mentor, event2.EndDate);
-            }
-
-            // Lưu DB để có các ID hợp lệ
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // Thêm bài nộp (SubmitResult) cho các Team ở Event 2
@@ -271,10 +267,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
                 TeamId = team3.Id,
                 TrackId = track2.Id,
                 RoundId = round2.Id,
-                SubmissionUrl = "https://github.com/team1/demo",
-                RepoUrl = "https://github.com/team1/demo",
-                DemoUrl = "https://example.com/demo-1",
-                SlideUrl = "https://docs.google.com/presentation/d/demo-1",
+                SubmissionUrl = "https://github.com/dotnet/runtime",
+                RepoUrl = "https://github.com/dotnet/runtime",
+                DemoUrl = "https://dotnet.microsoft.com",
+                SlideUrl = "https://docs.google.com",
                 Description = "Bài nộp siêu cấp VIP",
                 IsActive = true,
                 CreatedBy = student1.Id,
@@ -287,48 +283,16 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
                 TeamId = team4.Id,
                 TrackId = track2.Id,
                 RoundId = round2.Id,
-                SubmissionUrl = "https://github.com/team2/demo",
-                RepoUrl = "https://github.com/team2/demo",
-                DemoUrl = "https://example.com/demo-2",
-                SlideUrl = "https://docs.google.com/presentation/d/demo-2",
+                SubmissionUrl = "https://github.com/microsoft/TypeScript",
+                RepoUrl = "https://github.com/microsoft/TypeScript",
+                DemoUrl = "https://www.typescriptlang.org",
+                SlideUrl = "https://docs.google.com",
                 Description = "Bài nộp cực kì xuất sắc",
                 IsActive = true,
                 CreatedBy = student3.Id,
                 CreatedTime = targetDate.AddDays(-5) // nộp trước hạn
             };
             await _unitOfWork.GetRepository<SubmitResult>().AddAsync(submit2);
-
-            var submit1_track3 = new SubmitResult
-            {
-                TeamId = team3.Id,
-                TrackId = track3.Id,
-                RoundId = round2.Id,
-                SubmissionUrl = "https://github.com/team1/demo-phanmem",
-                RepoUrl = "https://github.com/team1/demo-phanmem",
-                DemoUrl = "https://example.com/demo-1-sw",
-                SlideUrl = "https://docs.google.com/presentation/d/demo-1-sw",
-                Description = "Bài nộp siêu cấp VIP (Phần mềm)",
-                IsActive = true,
-                CreatedBy = student1.Id,
-                CreatedTime = targetDate.AddDays(-4) // nộp trước hạn
-            };
-            await _unitOfWork.GetRepository<SubmitResult>().AddAsync(submit1_track3);
-
-            var submit2_track3 = new SubmitResult
-            {
-                TeamId = team4.Id,
-                TrackId = track3.Id,
-                RoundId = round2.Id,
-                SubmissionUrl = "https://github.com/team2/demo-phanmem",
-                RepoUrl = "https://github.com/team2/demo-phanmem",
-                DemoUrl = "https://example.com/demo-2-sw",
-                SlideUrl = "https://docs.google.com/presentation/d/demo-2-sw",
-                Description = "Bài nộp cực kì xuất sắc (Phần mềm)",
-                IsActive = true,
-                CreatedBy = student3.Id,
-                CreatedTime = targetDate.AddDays(-5) // nộp trước hạn
-            };
-            await _unitOfWork.GetRepository<SubmitResult>().AddAsync(submit2_track3);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
