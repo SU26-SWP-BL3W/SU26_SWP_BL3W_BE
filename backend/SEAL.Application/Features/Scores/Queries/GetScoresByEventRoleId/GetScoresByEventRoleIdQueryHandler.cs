@@ -35,7 +35,14 @@ namespace SEAL_Application.Features.Scores.Queries.GetScoresByEventRoleId
                     Comment = s.Comment,
                     IsSubmitted = s.IsSubmitted,
                     CreatedTime = s.CreatedTime,
-                    LastUpdatedTime = s.LastUpdatedTime
+                    LastUpdatedTime = s.LastUpdatedTime,
+                    Details = s.ScoreDetails.Select(d => new ScoreDetailItemModel
+                    {
+                        Id = d.Id,
+                        TemplateId = d.TemplateId,
+                        CriteriaId = d.CriteriaId,
+                        Value = d.Value
+                    }).ToList()
                 },
                 cancellationToken
             );

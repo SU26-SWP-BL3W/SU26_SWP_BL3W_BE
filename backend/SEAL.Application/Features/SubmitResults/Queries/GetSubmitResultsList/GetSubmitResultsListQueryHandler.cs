@@ -140,6 +140,7 @@ namespace SEAL_Application.Features.SubmitResults.Queries.GetSubmitResultsList
                     RepoUrl = sr.RepoUrl,
                     DemoUrl = sr.DemoUrl,
                     SlideUrl = sr.SlideUrl,
+                    Description = sr.Description,
                     IsActive = sr.IsActive,
                     CreatedTime = sr.CreatedTime
                 },

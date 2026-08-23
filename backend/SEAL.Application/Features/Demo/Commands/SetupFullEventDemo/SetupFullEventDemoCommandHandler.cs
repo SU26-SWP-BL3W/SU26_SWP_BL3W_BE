@@ -146,11 +146,12 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 EventId = fullEvent.Id,
                 RoundName = "Vòng Sơ Loại (Preliminary Round)",
                 RoundNumber = 1,
-                AdvancementRule = "top:3",
+                AdvancementRule = "top:2", // DEMO thăng vòng: track Web 3 đội -> top 2 vào tiếp, 1 đội rớt
                 StartDate = targetDate.AddDays(-25),
                 EndDate = targetDate.AddDays(-5),
                 ScoringStartDate = targetDate.AddDays(-4),
-                ScoringEndDate = targetDate.AddDays(-1),
+                // DEMO LIVE: mở cửa sổ chấm tới +7 ngày để giám khảo chấm trực tiếp
+                ScoringEndDate = targetDate.AddDays(7),
                 AppealStartDate = targetDate.AddDays(-1),
                 AppealEndDate = targetDate.AddDays(3)
             };
@@ -178,7 +179,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 StartDate = targetDate.AddDays(-25),
                 EndDate = targetDate.AddDays(-5),
                 ScoringStartDate = targetDate.AddDays(-4),
-                ScoringEndDate = targetDate.AddDays(-1)
+                ScoringEndDate = targetDate.AddDays(7) // DEMO LIVE: mở cửa sổ chấm tới +7 ngày để giám khảo chấm trực tiếp
             };
             var track2 = new Track
             {
@@ -190,7 +191,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 StartDate = targetDate.AddDays(-25),
                 EndDate = targetDate.AddDays(-5),
                 ScoringStartDate = targetDate.AddDays(-4),
-                ScoringEndDate = targetDate.AddDays(-1)
+                ScoringEndDate = targetDate.AddDays(7) // DEMO LIVE: mở cửa sổ chấm tới +7 ngày để giám khảo chấm trực tiếp
             };
             await _unitOfWork.GetRepository<Track>().AddRangeAsync(new[] { track1, track2 });
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -199,6 +200,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             var ecUser = await GetOrCreateUserAsync("ec_full@yopmail.com", "Nguyễn Văn Điều Phối", false, false, school.Id, cancellationToken);
             var judge1 = await GetOrCreateUserAsync("judge1_full@yopmail.com", "TS. Trần Giám Khảo AI", false, false, school.Id, cancellationToken);
             var judge2 = await GetOrCreateUserAsync("judge2_full@yopmail.com", "ThS. Lê Giám Khảo Web", false, false, school.Id, cancellationToken);
+            var judge3 = await GetOrCreateUserAsync("judge3_full@yopmail.com", "TS. Vũ Giám Khảo AI 2", false, false, school.Id, cancellationToken);
             var mentor1 = await GetOrCreateUserAsync("mentor1_full@yopmail.com", "KSC. Phạm Cố Vấn ML", false, false, school.Id, cancellationToken);
             var mentor2 = await GetOrCreateUserAsync("mentor2_full@yopmail.com", "KSC. Hoàng Cố Vấn App", false, false, school.Id, cancellationToken);
 
@@ -223,11 +225,13 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             // 9. Gán Vai trò Sự kiện (EventRoles) cho Ban tổ chức / Chuyên gia
             var ecRole = new EventRole { UserId = ecUser.Id, EventId = fullEvent.Id, RoleName = EventRoleType.EventCoordinator, ExpiredAt = fullEvent.EndDate, Notes = "Trưởng ban điều phối sự kiện" };
             var judge1Role = new EventRole { UserId = judge1.Id, EventId = fullEvent.Id, TrackId = track1.Id, RoleName = EventRoleType.Judge, ExpiredAt = fullEvent.EndDate, Notes = "Giám khảo chính Track AI" };
+            // DEMO: judge3 cùng chấm Track AI với judge1 -> minh hoạ "2 giám khảo/track -> điểm trung bình + đủ phiếu".
+            var judge3Role = new EventRole { UserId = judge3.Id, EventId = fullEvent.Id, TrackId = track1.Id, RoleName = EventRoleType.Judge, ExpiredAt = fullEvent.EndDate, Notes = "Giám khảo phụ Track AI" };
             var judge2Role = new EventRole { UserId = judge2.Id, EventId = fullEvent.Id, TrackId = track2.Id, RoleName = EventRoleType.Judge, ExpiredAt = fullEvent.EndDate, Notes = "Giám khảo chính Track Web/App" };
             var mentor1Role = new EventRole { UserId = mentor1.Id, EventId = fullEvent.Id, TrackId = track1.Id, RoleName = EventRoleType.Mentor, ExpiredAt = fullEvent.EndDate, Notes = "Cố vấn kỹ thuật AI" };
             var mentor2Role = new EventRole { UserId = mentor2.Id, EventId = fullEvent.Id, TrackId = track2.Id, RoleName = EventRoleType.Mentor, ExpiredAt = fullEvent.EndDate, Notes = "Cố vấn phát triển sản phẩm" };
 
-            await _unitOfWork.GetRepository<EventRole>().AddRangeAsync(new[] { ecRole, judge1Role, judge2Role, mentor1Role, mentor2Role });
+            await _unitOfWork.GetRepository<EventRole>().AddRangeAsync(new[] { ecRole, judge1Role, judge3Role, judge2Role, mentor1Role, mentor2Role });
 
             // 10. Tạo 5 Đội thi (Teams)
             var team1 = new Team { EventId = fullEvent.Id, TrackId = track1.Id, Name = "AI Titans", Description = "Dự án Phân loại rác thông minh tự động bằng AI", Status = TeamStatus.Registered };
@@ -235,8 +239,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             var team3 = new Team { EventId = fullEvent.Id, TrackId = track2.Id, Name = "Green Tech", Description = "Ứng dụng Chia sẻ phương tiện di chuyển xanh Eco-Transport", Status = TeamStatus.Registered };
             var team4 = new Team { EventId = fullEvent.Id, TrackId = track2.Id, Name = "Quantum Leap", Description = "Nền tảng Tối ưu năng lượng thông minh cho Tòa nhà", Status = TeamStatus.Registered };
             var team5 = new Team { EventId = fullEvent.Id, TrackId = track2.Id, Name = "Future Builders", Description = "Hệ thống IoT Quan trắc và Cảnh báo ô nhiễm nguồn nước", Status = TeamStatus.Registered };
+            // DEMO đội bị loại: KHÔNG vào bảng xếp hạng, KHÔNG bị đòi phiếu chấm (bị lọc ở CalculateRoundResults).
+            var team6 = new Team { EventId = fullEvent.Id, TrackId = track2.Id, Name = "Ghost Coders", Description = "Đội vi phạm quy chế (nộp bài đạo nhái) — đã bị loại để minh hoạ.", Status = TeamStatus.Disqualified };
 
-            await _unitOfWork.GetRepository<Team>().AddRangeAsync(new[] { team1, team2, team3, team4, team5 });
+            await _unitOfWork.GetRepository<Team>().AddRangeAsync(new[] { team1, team2, team3, team4, team5, team6 });
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // 11. Gán Leader & Thành viên cho 5 Đội
@@ -306,10 +312,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 TeamId = team3.Id,
                 TrackId = track2.Id,
                 RoundId = round1.Id,
-                SubmissionUrl = "https://github.com/green-tech/eco-smart-transport",
-                RepoUrl = "https://github.com/green-tech/eco-smart-transport",
-                DemoUrl = "https://greentech-fpt.web.app",
-                SlideUrl = "https://docs.google.com/presentation/d/greentech-pitch",
+                SubmissionUrl = "https://github.com/dotnet/aspnetcore",
+                RepoUrl = "https://github.com/dotnet/aspnetcore",
+                DemoUrl = "https://dotnet.microsoft.com",
+                SlideUrl = "https://docs.google.com",
                 Description = "Ứng dụng chia sẻ phương tiện di chuyển xanh trong khuôn viên trường học và khu đô thị thông minh.",
                 IsActive = true,
                 CreatedBy = studentUsers[10].Id,
@@ -320,10 +326,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 TeamId = team4.Id,
                 TrackId = track2.Id,
                 RoundId = round1.Id,
-                SubmissionUrl = "https://github.com/quantum-leap/energy-monitor-hub",
-                RepoUrl = "https://github.com/quantum-leap/energy-monitor-hub",
-                DemoUrl = "https://energyhub.io",
-                SlideUrl = "https://docs.google.com/presentation/d/quantum-pitch",
+                SubmissionUrl = "https://github.com/vercel/next.js",
+                RepoUrl = "https://github.com/vercel/next.js",
+                DemoUrl = "https://nextjs.org",
+                SlideUrl = "https://docs.google.com",
                 Description = "Nền tảng IoT & Web Dashboard giám sát và tối ưu hóa mức tiêu thụ năng lượng theo thời gian thực.",
                 IsActive = true,
                 CreatedBy = studentUsers[15].Id,
@@ -334,10 +340,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 TeamId = team5.Id,
                 TrackId = track2.Id,
                 RoundId = round1.Id,
-                SubmissionUrl = "https://github.com/future-builders/clean-water-iot",
-                RepoUrl = "https://github.com/future-builders/clean-water-iot",
-                DemoUrl = "https://cleanwater-iot.net",
-                SlideUrl = "https://docs.google.com/presentation/d/cleanwater-pitch",
+                SubmissionUrl = "https://github.com/facebook/react",
+                RepoUrl = "https://github.com/facebook/react",
+                DemoUrl = "https://react.dev",
+                SlideUrl = "https://docs.google.com",
                 Description = "Hệ thống quan trắc và cảnh báo sớm mức độ ô nhiễm nguồn nước ngầm phục vụ nông nghiệp công nghệ cao.",
                 IsActive = true,
                 CreatedBy = studentUsers[20].Id,
@@ -358,11 +364,15 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             // 14. Chấm điểm Giám khảo (Scores & ScoreDetails)
             var score1 = new Score { EventRoleId = judge1Role.Id, SubmitResultId = submit1.Id, TotalScore = 9.25m, Comment = "Dự án xuất sắc toàn diện! AI chạy tốt, demo thực tế rất ấn tượng.", IsSubmitted = true };
             var score2 = new Score { EventRoleId = judge1Role.Id, SubmitResultId = submit2.Id, TotalScore = 8.50m, Comment = "Giải pháp có ý nghĩa bảo vệ môi trường cao, kiến trúc kỹ thuật tương đối hoàn thiện.", IsSubmitted = true };
-            var score3 = new Score { EventRoleId = judge2Role.Id, SubmitResultId = submit3.Id, TotalScore = 9.00m, Comment = "Sản phẩm hoàn thiện cao, giao diện đẹp và tính khả thi áp dụng thực tế rất lớn.", IsSubmitted = true };
-            var score4 = new Score { EventRoleId = judge2Role.Id, SubmitResultId = submit4.Id, TotalScore = 8.25m, Comment = "Hệ thống vận hành tốt, giải quyết tốt bài toán năng lượng.", IsSubmitted = true };
-            var score5 = new Score { EventRoleId = judge2Role.Id, SubmitResultId = submit5.Id, TotalScore = 7.80m, Comment = "Ý tưởng tốt, cần đầu tư trau chuốt thêm phần giao diện người dùng.", IsSubmitted = true };
+            // DEMO LIVE (Track Web/App): judge2_full KHÔNG chấm sẵn — CHỪA CẢ 3 bài (submit3/4/5)
+            // để chấm trực tiếp trước mặt thầy. (Trước đây pre-chấm submit3=9.00, submit4=8.25 -> đã bỏ.)
+            // DEMO 2 GIÁM KHẢO / TRACK AI: judge3 chấm CÙNG submit1+submit2 với judge1 (điểm KHÁC nhau)
+            // -> khi tính điểm sẽ lấy TRUNG BÌNH 2 giám khảo (vd submit1: 9.25 & 8.75 -> 9.00).
+            var score1b = new Score { EventRoleId = judge3Role.Id, SubmitResultId = submit1.Id, TotalScore = 8.75m, Comment = "Ý tưởng tốt nhưng phần đánh giá độ chính xác mô hình cần dữ liệu kiểm thử rộng hơn.", IsSubmitted = true };
+            var score2b = new Score { EventRoleId = judge3Role.Id, SubmitResultId = submit2.Id, TotalScore = 9.10m, Comment = "Kiến trúc cảm biến + vệ tinh rất chắc, khả năng triển khai thực địa cao.", IsSubmitted = true };
+            // DEMO LIVE: CHỪA submit5 (đội Future Builders) CHƯA chấm — để giám khảo judge2_full chấm TRỰC TIẾP trước mặt thầy.
 
-            await _unitOfWork.GetRepository<Score>().AddRangeAsync(new[] { score1, score2, score3, score4, score5 });
+            await _unitOfWork.GetRepository<Score>().AddRangeAsync(new[] { score1, score2, score1b, score2b });
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // Tạo chi tiết điểm (ScoreDetails) theo 4 tiêu chí
@@ -370,9 +380,8 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             {
                 (score1, new[] { 9.5m, 9.0m, 9.5m, 9.0m }),
                 (score2, new[] { 8.5m, 8.5m, 8.5m, 8.5m }),
-                (score3, new[] { 9.0m, 9.0m, 9.0m, 9.0m }),
-                (score4, new[] { 8.5m, 8.0m, 8.5m, 8.0m }),
-                (score5, new[] { 8.0m, 7.5m, 8.0m, 7.5m })
+                (score1b, new[] { 8.5m, 9.0m, 8.5m, 9.0m }),
+                (score2b, new[] { 9.0m, 9.0m, 9.5m, 9.0m })
             };
 
             var scoreDetailsList = new List<ScoreDetail>();
@@ -391,14 +400,9 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             }
             await _unitOfWork.GetRepository<ScoreDetail>().AddRangeAsync(scoreDetailsList);
 
-            // 15. Kết quả xếp hạng & Công bố (FinalResults)
-            var fr1 = new FinalResult { EventId = fullEvent.Id, RoundId = round1.Id, TeamId = team1.Id, PrizeId = prize1.Id, FinalScore = 9.25m, Rank = 1, IsAdvanced = true, IsPublished = true };
-            var fr3 = new FinalResult { EventId = fullEvent.Id, RoundId = round1.Id, TeamId = team3.Id, PrizeId = prize2.Id, FinalScore = 9.00m, Rank = 2, IsAdvanced = true, IsPublished = true };
-            var fr2 = new FinalResult { EventId = fullEvent.Id, RoundId = round1.Id, TeamId = team2.Id, PrizeId = prize3.Id, FinalScore = 8.50m, Rank = 3, IsAdvanced = true, IsPublished = true };
-            var fr4 = new FinalResult { EventId = fullEvent.Id, RoundId = round1.Id, TeamId = team4.Id, PrizeId = prize4.Id, FinalScore = 8.25m, Rank = 4, IsAdvanced = false, IsPublished = true };
-            var fr5 = new FinalResult { EventId = fullEvent.Id, RoundId = round1.Id, TeamId = team5.Id, PrizeId = null, FinalScore = 7.80m, Rank = 5, IsAdvanced = false, IsPublished = true };
-
-            await _unitOfWork.GetRepository<FinalResult>().AddRangeAsync(new[] { fr1, fr3, fr2, fr4, fr5 });
+            // 15. DEMO LIVE: KHÔNG tạo sẵn FinalResults. Lý do bắt buộc: nếu vòng đã có FinalResult,
+            //     SaveScore sẽ KHÓA chấm điểm (roundPublished) -> giám khảo không chấm live được.
+            //     Để EC tự bấm "TÍNH ĐIỂM TỰ ĐỘNG" + "CÔNG BỐ KẾT QUẢ" trước mặt thầy (sau khi đóng vòng).
 
             // 16. Đơn Phúc khảo (Appeal)
             var appeal = new Appeal
@@ -407,7 +411,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 SubmitResultId = submit4.Id,
                 Reason = "Đội Quantum Leap xin phúc khảo tiêu chí Kiến trúc Kỹ thuật do có phần kiểm thử hiệu năng benchmark đã nộp nhưng chưa kịp trình diễn trong lúc demo.",
                 Status = AppealStatus.Approved,
-                AssignedJudgeId = judge2.Id,
+                AssignedJudgeId = judge2Role.Id,
                 Response = "Ban Giám khảo đã hội ý, rà soát lại phần benchmark hiệu năng và thống nhất cộng 0.25 điểm cho tiêu chí Kỹ thuật. Ghi nhận tinh thần cầu thị của đội!"
             };
             await _unitOfWork.GetRepository<Appeal>().AddAsync(appeal);
@@ -415,8 +419,8 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             // 17. Thông báo hệ thống (AppNotification)
             var notifications = new List<AppNotification>
             {
-                new AppNotification { UserId = ecUser.Id, Title = "Sự kiện đã hoàn tất chấm điểm", Message = "Vòng Sơ loại đã hoàn tất nhập điểm và xếp hạng cho 5 đội thi.", Type = "event", IsRead = false },
-                new AppNotification { UserId = studentUsers[0].Id, Title = "Chúc mừng Đội AI Titans!", Message = "Đội bạn đã xuất sắc đạt Hạng 1 Vòng Sơ loại với điểm số 9.25 và giành quyền vào Vòng Chung kết.", Type = "result", IsRead = false },
+                new AppNotification { UserId = ecUser.Id, Title = "Sự kiện sẵn sàng chấm live", Message = "Vòng Sơ loại chưa tính/công bố kết quả. EC bấm tính điểm sau khi giám khảo chốt phiếu.", Type = "event", IsRead = false },
+                new AppNotification { UserId = studentUsers[0].Id, Title = "Đã nhận bài nộp", Message = "Bài của đội AI Titans đã được ghi nhận cho Vòng Sơ loại.", Type = "result", IsRead = false },
                 new AppNotification { UserId = studentUsers[15].Id, Title = "Đơn phúc khảo đã được xử lý", Message = "Đơn phúc khảo của đội Quantum Leap đã được Ban Giám khảo phản hồi chấp thuận.", Type = "appeal", IsRead = true }
             };
             await _unitOfWork.GetRepository<AppNotification>().AddRangeAsync(notifications);
@@ -432,11 +436,11 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 Accounts = new
                 {
                     EventCoordinator = "ec_full@yopmail.com (Pass: 123456)",
-                    Judges = new[] { "judge1_full@yopmail.com (Pass: 123456)", "judge2_full@yopmail.com (Pass: 123456)" },
+                    Judges = new[] { "judge1_full@yopmail.com + judge3_full@yopmail.com (2 GK Track AI)", "judge2_full@yopmail.com (Track Web)", "Pass tất cả: 123456" },
                     Mentors = new[] { "mentor1_full@yopmail.com (Pass: 123456)", "mentor2_full@yopmail.com (Pass: 123456)" },
                     Students = "student1@yopmail.com đến student25@yopmail.com (Pass: 123456)"
                 },
-                Teams = new[] { "AI Titans (Hạng 1 - 9.25)", "Green Tech (Hạng 2 - 9.00)", "Cyber Knights (Hạng 3 - 8.50)", "Quantum Leap (Hạng 4 - 8.25)", "Future Builders (Hạng 5 - 7.80)" },
+                Teams = new[] { "AI Titans + Cyber Knights (Track AI, đã chấm 2 GK)", "Green Tech / Quantum Leap / Future Builders (Track Web — judge2_full chấm live)" },
                 Appeals = new[] { "Đơn phúc khảo của đội Quantum Leap (Đã xử lý Approved)" }
             };
 

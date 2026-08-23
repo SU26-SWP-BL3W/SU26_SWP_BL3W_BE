@@ -16,6 +16,7 @@ namespace SEAL_Application.Features.SubmitResults.Queries.GetSubmitResultsList.M
         public string? RepoUrl { get; set; }
         public string? DemoUrl { get; set; }
         public string? SlideUrl { get; set; }
+        public string? Description { get; set; }
         public bool IsActive { get; set; }
         public DateTimeOffset CreatedTime { get; set; }
     }

@@ -24,6 +24,19 @@ if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONM
     Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
 }
 
+// Render (va nhieu container host) gioi han ~128 inotify instance. WebApplication.CreateBuilder
+// mac dinh bat FileSystemWatcher de reload appsettings.json -> de cham tran limiit roi crash:
+// IOException "user limit (128) on the number of inotify instances has been reached" (exit 139).
+// Tat reload-on-change: env Production doi config qua redeploy, khong can watch file.
+if (string.Equals(
+        Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT"),
+        "Production",
+        StringComparison.OrdinalIgnoreCase)
+    && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("DOTNET_HOSTBUILDER_RELOADCONFIGONCHANGE")))
+{
+    Environment.SetEnvironmentVariable("DOTNET_HOSTBUILDER_RELOADCONFIGONCHANGE", "false");
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -67,8 +80,9 @@ builder.Services.AddHttpClient<IGitHostingService, GitHostingService>(client =>
 // ma khong can key that (thuong chi ton tai tren Render production). Set key S3 that
 // vao appsettings.Development.json (gitignored) se tu dong chuyen ve dung CloudFly that.
 var s3AccessKey = builder.Configuration.GetSection("S3").GetValue<string>("AccessKeyId");
-var useLocalStorage = builder.Environment.IsDevelopment()
-    && (string.IsNullOrWhiteSpace(s3AccessKey) || s3AccessKey.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase));
+var useLocalStorage = string.IsNullOrWhiteSpace(s3AccessKey)
+    || s3AccessKey.StartsWith("YOUR_", StringComparison.OrdinalIgnoreCase)
+    || builder.Environment.IsDevelopment();
 
 if (useLocalStorage)
 {
