@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "seal-be-dev",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "SEAL_Backend"],
+      "port": 5138,
+      "url": "http://localhost:5138/swagger"
+    }
+  ]
+}
