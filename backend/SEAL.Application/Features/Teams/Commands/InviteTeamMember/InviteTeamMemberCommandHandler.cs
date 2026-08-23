@@ -134,6 +134,11 @@ namespace SEAL_Application.Features.Teams.Commands.InviteTeamMember
                         $"Đội đã đủ tối đa {MAX_TEAM_SIZE} thành viên (tính cả lời mời đang chờ phản hồi).");
                 }
 
+
+
+                //  A - Email chưa từng có tài khoản
+
+
                 var verificationToken = Guid.NewGuid().ToString();
                 var tempUser = new User
                 {
@@ -257,6 +262,9 @@ namespace SEAL_Application.Features.Teams.Commands.InviteTeamMember
                 Notes = request.Model.Notes
             };
 
+
+            //  B — Email đã có tài khoản tạm nhưng CHƯA kích hoạt
+
             // Người được mời là tài khoản TẠM chưa kích hoạt (tạo từ lời mời trước đó nhưng chưa bấm link):
             // cấp lại token kích hoạt mới — họ chưa có mật khẩu nên email "đăng nhập để chấp nhận" là vô dụng
             bool needsActivation = invitedUser.IsTemporary && !invitedUser.IsEmailVerified;
@@ -297,6 +305,9 @@ namespace SEAL_Application.Features.Teams.Commands.InviteTeamMember
                     IsNewTemporaryUser = true
                 };
             }
+
+
+            // C — Email đã có tài khoản thật (đã kích hoạt)
 
             // Gửi email mời tham gia đội (đã có tài khoản)
             var teamLink = $"{frontendUrl}/my-team";

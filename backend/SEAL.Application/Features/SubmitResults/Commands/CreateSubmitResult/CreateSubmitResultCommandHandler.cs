@@ -106,14 +106,16 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
             }
 
             var now = DateTime.UtcNow;
-            // Cửa sổ nộp theo Round — Track.EndDate là deadline cả event, không dùng để chặn từng vòng.
-            if (now < round.StartDate)
+            // Cửa sổ nộp: Track nếu có mốc, không thì Round — khớp Update/Delete.
+            var submitStart = track.StartDate ?? round.StartDate;
+            var submitEnd = track.EndDate ?? round.EndDate;
+            if (now < submitStart)
             {
-                return BaseException.BadRequestInvaildInputResponse("Vòng thi chưa mở, chưa thể nộp bài.");
+                return BaseException.BadRequestInvaildInputResponse("Hạng mục/vòng thi chưa mở, chưa thể nộp bài.");
             }
-            if (now > round.EndDate)
+            if (now > submitEnd)
             {
-                return BaseException.BadRequestInvaildInputResponse("Đã hết hạn nộp bài cho vòng thi này.");
+                return BaseException.BadRequestInvaildInputResponse("Đã hết hạn nộp bài cho hạng mục này.");
             }
 
             var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(

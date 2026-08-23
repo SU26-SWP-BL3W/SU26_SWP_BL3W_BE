@@ -284,10 +284,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 TeamId = team1.Id,
                 TrackId = track1.Id,
                 RoundId = round1.Id,
-                SubmissionUrl = "https://github.com/ai-titans/smart-recycling-ai",
-                RepoUrl = "https://github.com/ai-titans/smart-recycling-ai",
-                DemoUrl = "https://ai-titans.vercel.app",
-                SlideUrl = "https://docs.google.com/presentation/d/ai-titans-pitch",
+                SubmissionUrl = "https://github.com/ultralytics/ultralytics",
+                RepoUrl = "https://github.com/ultralytics/ultralytics",
+                DemoUrl = "https://docs.ultralytics.com",
+                SlideUrl = "https://docs.google.com",
                 Description = "Hệ thống phân loại rác thông minh tự động sử dụng Computer Vision (YOLOv8) kết hợp Edge AI.",
                 IsActive = true,
                 CreatedBy = studentUsers[0].Id,
@@ -298,10 +298,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 TeamId = team2.Id,
                 TrackId = track1.Id,
                 RoundId = round1.Id,
-                SubmissionUrl = "https://github.com/cyber-knights/wildfire-detection-ai",
-                RepoUrl = "https://github.com/cyber-knights/wildfire-detection-ai",
-                DemoUrl = "https://wildfire-ai.dev",
-                SlideUrl = "https://docs.google.com/presentation/d/wildfire-pitch",
+                SubmissionUrl = "https://github.com/pytorch/pytorch",
+                RepoUrl = "https://github.com/pytorch/pytorch",
+                DemoUrl = "https://pytorch.org",
+                SlideUrl = "https://docs.google.com",
                 Description = "Mô hình dự báo nguy cơ cháy rừng sớm qua ảnh vệ tinh đa phổ và mạng cảm biến IoT.",
                 IsActive = true,
                 CreatedBy = studentUsers[5].Id,
@@ -312,10 +312,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 TeamId = team3.Id,
                 TrackId = track2.Id,
                 RoundId = round1.Id,
-                SubmissionUrl = "https://github.com/green-tech/eco-smart-transport",
-                RepoUrl = "https://github.com/green-tech/eco-smart-transport",
-                DemoUrl = "https://greentech-fpt.web.app",
-                SlideUrl = "https://docs.google.com/presentation/d/greentech-pitch",
+                SubmissionUrl = "https://github.com/dotnet/aspnetcore",
+                RepoUrl = "https://github.com/dotnet/aspnetcore",
+                DemoUrl = "https://dotnet.microsoft.com",
+                SlideUrl = "https://docs.google.com",
                 Description = "Ứng dụng chia sẻ phương tiện di chuyển xanh trong khuôn viên trường học và khu đô thị thông minh.",
                 IsActive = true,
                 CreatedBy = studentUsers[10].Id,
@@ -326,10 +326,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 TeamId = team4.Id,
                 TrackId = track2.Id,
                 RoundId = round1.Id,
-                SubmissionUrl = "https://github.com/quantum-leap/energy-monitor-hub",
-                RepoUrl = "https://github.com/quantum-leap/energy-monitor-hub",
-                DemoUrl = "https://energyhub.io",
-                SlideUrl = "https://docs.google.com/presentation/d/quantum-pitch",
+                SubmissionUrl = "https://github.com/vercel/next.js",
+                RepoUrl = "https://github.com/vercel/next.js",
+                DemoUrl = "https://nextjs.org",
+                SlideUrl = "https://docs.google.com",
                 Description = "Nền tảng IoT & Web Dashboard giám sát và tối ưu hóa mức tiêu thụ năng lượng theo thời gian thực.",
                 IsActive = true,
                 CreatedBy = studentUsers[15].Id,
@@ -340,10 +340,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 TeamId = team5.Id,
                 TrackId = track2.Id,
                 RoundId = round1.Id,
-                SubmissionUrl = "https://github.com/future-builders/clean-water-iot",
-                RepoUrl = "https://github.com/future-builders/clean-water-iot",
-                DemoUrl = "https://cleanwater-iot.net",
-                SlideUrl = "https://docs.google.com/presentation/d/cleanwater-pitch",
+                SubmissionUrl = "https://github.com/facebook/react",
+                RepoUrl = "https://github.com/facebook/react",
+                DemoUrl = "https://react.dev",
+                SlideUrl = "https://docs.google.com",
                 Description = "Hệ thống quan trắc và cảnh báo sớm mức độ ô nhiễm nguồn nước ngầm phục vụ nông nghiệp công nghệ cao.",
                 IsActive = true,
                 CreatedBy = studentUsers[20].Id,
@@ -364,15 +364,15 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             // 14. Chấm điểm Giám khảo (Scores & ScoreDetails)
             var score1 = new Score { EventRoleId = judge1Role.Id, SubmitResultId = submit1.Id, TotalScore = 9.25m, Comment = "Dự án xuất sắc toàn diện! AI chạy tốt, demo thực tế rất ấn tượng.", IsSubmitted = true };
             var score2 = new Score { EventRoleId = judge1Role.Id, SubmitResultId = submit2.Id, TotalScore = 8.50m, Comment = "Giải pháp có ý nghĩa bảo vệ môi trường cao, kiến trúc kỹ thuật tương đối hoàn thiện.", IsSubmitted = true };
-            var score3 = new Score { EventRoleId = judge2Role.Id, SubmitResultId = submit3.Id, TotalScore = 9.00m, Comment = "Sản phẩm hoàn thiện cao, giao diện đẹp và tính khả thi áp dụng thực tế rất lớn.", IsSubmitted = true };
-            var score4 = new Score { EventRoleId = judge2Role.Id, SubmitResultId = submit4.Id, TotalScore = 8.25m, Comment = "Hệ thống vận hành tốt, giải quyết tốt bài toán năng lượng.", IsSubmitted = true };
+            // DEMO LIVE (Track Web/App): judge2_full KHÔNG chấm sẵn — CHỪA CẢ 3 bài (submit3/4/5)
+            // để chấm trực tiếp trước mặt thầy. (Trước đây pre-chấm submit3=9.00, submit4=8.25 -> đã bỏ.)
             // DEMO 2 GIÁM KHẢO / TRACK AI: judge3 chấm CÙNG submit1+submit2 với judge1 (điểm KHÁC nhau)
             // -> khi tính điểm sẽ lấy TRUNG BÌNH 2 giám khảo (vd submit1: 9.25 & 8.75 -> 9.00).
             var score1b = new Score { EventRoleId = judge3Role.Id, SubmitResultId = submit1.Id, TotalScore = 8.75m, Comment = "Ý tưởng tốt nhưng phần đánh giá độ chính xác mô hình cần dữ liệu kiểm thử rộng hơn.", IsSubmitted = true };
             var score2b = new Score { EventRoleId = judge3Role.Id, SubmitResultId = submit2.Id, TotalScore = 9.10m, Comment = "Kiến trúc cảm biến + vệ tinh rất chắc, khả năng triển khai thực địa cao.", IsSubmitted = true };
             // DEMO LIVE: CHỪA submit5 (đội Future Builders) CHƯA chấm — để giám khảo judge2_full chấm TRỰC TIẾP trước mặt thầy.
 
-            await _unitOfWork.GetRepository<Score>().AddRangeAsync(new[] { score1, score2, score3, score4, score1b, score2b });
+            await _unitOfWork.GetRepository<Score>().AddRangeAsync(new[] { score1, score2, score1b, score2b });
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // Tạo chi tiết điểm (ScoreDetails) theo 4 tiêu chí
@@ -380,8 +380,6 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             {
                 (score1, new[] { 9.5m, 9.0m, 9.5m, 9.0m }),
                 (score2, new[] { 8.5m, 8.5m, 8.5m, 8.5m }),
-                (score3, new[] { 9.0m, 9.0m, 9.0m, 9.0m }),
-                (score4, new[] { 8.5m, 8.0m, 8.5m, 8.0m }),
                 (score1b, new[] { 8.5m, 9.0m, 8.5m, 9.0m }),
                 (score2b, new[] { 9.0m, 9.0m, 9.5m, 9.0m })
             };
@@ -413,7 +411,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                 SubmitResultId = submit4.Id,
                 Reason = "Đội Quantum Leap xin phúc khảo tiêu chí Kiến trúc Kỹ thuật do có phần kiểm thử hiệu năng benchmark đã nộp nhưng chưa kịp trình diễn trong lúc demo.",
                 Status = AppealStatus.Approved,
-                AssignedJudgeId = judge2.Id,
+                AssignedJudgeId = judge2Role.Id,
                 Response = "Ban Giám khảo đã hội ý, rà soát lại phần benchmark hiệu năng và thống nhất cộng 0.25 điểm cho tiêu chí Kỹ thuật. Ghi nhận tinh thần cầu thị của đội!"
             };
             await _unitOfWork.GetRepository<Appeal>().AddAsync(appeal);
@@ -421,8 +419,8 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             // 17. Thông báo hệ thống (AppNotification)
             var notifications = new List<AppNotification>
             {
-                new AppNotification { UserId = ecUser.Id, Title = "Sự kiện đã hoàn tất chấm điểm", Message = "Vòng Sơ loại đã hoàn tất nhập điểm và xếp hạng cho 5 đội thi.", Type = "event", IsRead = false },
-                new AppNotification { UserId = studentUsers[0].Id, Title = "Chúc mừng Đội AI Titans!", Message = "Đội bạn đã xuất sắc đạt Hạng 1 Vòng Sơ loại với điểm số 9.25 và giành quyền vào Vòng Chung kết.", Type = "result", IsRead = false },
+                new AppNotification { UserId = ecUser.Id, Title = "Sự kiện sẵn sàng chấm live", Message = "Vòng Sơ loại chưa tính/công bố kết quả. EC bấm tính điểm sau khi giám khảo chốt phiếu.", Type = "event", IsRead = false },
+                new AppNotification { UserId = studentUsers[0].Id, Title = "Đã nhận bài nộp", Message = "Bài của đội AI Titans đã được ghi nhận cho Vòng Sơ loại.", Type = "result", IsRead = false },
                 new AppNotification { UserId = studentUsers[15].Id, Title = "Đơn phúc khảo đã được xử lý", Message = "Đơn phúc khảo của đội Quantum Leap đã được Ban Giám khảo phản hồi chấp thuận.", Type = "appeal", IsRead = true }
             };
             await _unitOfWork.GetRepository<AppNotification>().AddRangeAsync(notifications);
@@ -442,7 +440,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
                     Mentors = new[] { "mentor1_full@yopmail.com (Pass: 123456)", "mentor2_full@yopmail.com (Pass: 123456)" },
                     Students = "student1@yopmail.com đến student25@yopmail.com (Pass: 123456)"
                 },
-                Teams = new[] { "AI Titans (Hạng 1 - 9.25)", "Green Tech (Hạng 2 - 9.00)", "Cyber Knights (Hạng 3 - 8.50)", "Quantum Leap (Hạng 4 - 8.25)", "Future Builders (Hạng 5 - 7.80)" },
+                Teams = new[] { "AI Titans + Cyber Knights (Track AI, đã chấm 2 GK)", "Green Tech / Quantum Leap / Future Builders (Track Web — judge2_full chấm live)" },
                 Appeals = new[] { "Đơn phúc khảo của đội Quantum Leap (Đã xử lý Approved)" }
             };
 

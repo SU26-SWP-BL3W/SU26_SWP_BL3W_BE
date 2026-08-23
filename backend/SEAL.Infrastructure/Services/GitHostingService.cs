@@ -26,8 +26,14 @@ namespace SEAL_Infrastructure.Services
 
         public async Task<GitRepoInspectResult> InspectAsync(string repoUrl, CancellationToken cancellationToken = default)
         {
-            var result = new GitRepoInspectResult { Host = "other" };
-            if (string.IsNullOrWhiteSpace(repoUrl)) return result;
+            if (string.IsNullOrWhiteSpace(repoUrl))
+            {
+                return new GitRepoInspectResult
+                {
+                    ShouldReject = true,
+                    Error = "Repo phải là GitHub hoặc GitLab công khai."
+                };
+            }
 
             var gh = GitHub.Match(repoUrl.Trim());
             if (gh.Success)
@@ -48,7 +54,12 @@ namespace SEAL_Infrastructure.Services
                 return await FetchGitlabAsync(path, cancellationToken);
             }
 
-            return result;
+            return new GitRepoInspectResult
+            {
+                ShouldReject = true,
+                Host = "other",
+                Error = "Repo phải là GitHub (github.com/owner/repo) hoặc GitLab (gitlab.com/owner/repo)."
+            };
         }
 
         private async Task<GitRepoInspectResult> FetchGithubAsync(string owner, string repo, CancellationToken ct)
