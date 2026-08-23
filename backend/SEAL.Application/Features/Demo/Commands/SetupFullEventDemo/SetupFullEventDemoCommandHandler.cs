@@ -364,15 +364,15 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             // 14. Chấm điểm Giám khảo (Scores & ScoreDetails)
             var score1 = new Score { EventRoleId = judge1Role.Id, SubmitResultId = submit1.Id, TotalScore = 9.25m, Comment = "Dự án xuất sắc toàn diện! AI chạy tốt, demo thực tế rất ấn tượng.", IsSubmitted = true };
             var score2 = new Score { EventRoleId = judge1Role.Id, SubmitResultId = submit2.Id, TotalScore = 8.50m, Comment = "Giải pháp có ý nghĩa bảo vệ môi trường cao, kiến trúc kỹ thuật tương đối hoàn thiện.", IsSubmitted = true };
-            var score3 = new Score { EventRoleId = judge2Role.Id, SubmitResultId = submit3.Id, TotalScore = 9.00m, Comment = "Sản phẩm hoàn thiện cao, giao diện đẹp và tính khả thi áp dụng thực tế rất lớn.", IsSubmitted = true };
-            var score4 = new Score { EventRoleId = judge2Role.Id, SubmitResultId = submit4.Id, TotalScore = 8.25m, Comment = "Hệ thống vận hành tốt, giải quyết tốt bài toán năng lượng.", IsSubmitted = true };
+            // DEMO LIVE (Track Web/App): judge2_full KHÔNG chấm sẵn — CHỪA CẢ 3 bài (submit3/4/5)
+            // để chấm trực tiếp trước mặt thầy. (Trước đây pre-chấm submit3=9.00, submit4=8.25 -> đã bỏ.)
             // DEMO 2 GIÁM KHẢO / TRACK AI: judge3 chấm CÙNG submit1+submit2 với judge1 (điểm KHÁC nhau)
             // -> khi tính điểm sẽ lấy TRUNG BÌNH 2 giám khảo (vd submit1: 9.25 & 8.75 -> 9.00).
             var score1b = new Score { EventRoleId = judge3Role.Id, SubmitResultId = submit1.Id, TotalScore = 8.75m, Comment = "Ý tưởng tốt nhưng phần đánh giá độ chính xác mô hình cần dữ liệu kiểm thử rộng hơn.", IsSubmitted = true };
             var score2b = new Score { EventRoleId = judge3Role.Id, SubmitResultId = submit2.Id, TotalScore = 9.10m, Comment = "Kiến trúc cảm biến + vệ tinh rất chắc, khả năng triển khai thực địa cao.", IsSubmitted = true };
             // DEMO LIVE: CHỪA submit5 (đội Future Builders) CHƯA chấm — để giám khảo judge2_full chấm TRỰC TIẾP trước mặt thầy.
 
-            await _unitOfWork.GetRepository<Score>().AddRangeAsync(new[] { score1, score2, score3, score4, score1b, score2b });
+            await _unitOfWork.GetRepository<Score>().AddRangeAsync(new[] { score1, score2, score1b, score2b });
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // Tạo chi tiết điểm (ScoreDetails) theo 4 tiêu chí
@@ -380,8 +380,6 @@ namespace SEAL_Application.Features.Demo.Commands.SetupFullEventDemo
             {
                 (score1, new[] { 9.5m, 9.0m, 9.5m, 9.0m }),
                 (score2, new[] { 8.5m, 8.5m, 8.5m, 8.5m }),
-                (score3, new[] { 9.0m, 9.0m, 9.0m, 9.0m }),
-                (score4, new[] { 8.5m, 8.0m, 8.5m, 8.0m }),
                 (score1b, new[] { 8.5m, 9.0m, 8.5m, 9.0m }),
                 (score2b, new[] { 9.0m, 9.0m, 9.5m, 9.0m })
             };
