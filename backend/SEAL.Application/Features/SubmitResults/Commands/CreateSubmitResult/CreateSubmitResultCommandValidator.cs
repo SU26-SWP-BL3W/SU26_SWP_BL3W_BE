@@ -22,7 +22,7 @@ namespace SEAL_Application.Features.SubmitResults.Commands.CreateSubmitResult
                 .Must(m => !string.IsNullOrWhiteSpace(m.RepoUrl) || !string.IsNullOrWhiteSpace(m.SubmissionUrl))
                 .WithMessage("Cần đường dẫn GitHub/GitLab (RepoUrl).")
                 .OverridePropertyName("Model.RepoUrl");
-
+            
             RuleFor(x => x.Model.DemoUrl)
                 .NotEmpty().WithMessage("Cần đường dẫn demo (DemoUrl).")
                 .MaximumLength(2000)
