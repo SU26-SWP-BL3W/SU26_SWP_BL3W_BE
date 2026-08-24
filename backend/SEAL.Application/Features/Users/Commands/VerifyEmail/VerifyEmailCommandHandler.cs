@@ -44,7 +44,13 @@ namespace SEAL_Application.Features.Users.Commands.VerifyEmail
             user.EmailVerificationToken = null;
             user.EmailVerificationExpiry = null;
 
-            // Tài khoản tạm (giám khảo được mời): cấp mật khẩu tạm ngay khi xác thực email thành công và tự động duyệt
+                       
+
+            // Kích hoạt tài khoản tạm - nơi mật khẩu tạm được tạo 
+            
+
+
+            // Tài khoản tạm: cấp mật khẩu tạm ngay khi xác thực email thành công và tự động duyệt
             string? tempPassword = null;
             if (user.IsTemporary)
             {
@@ -60,12 +66,15 @@ namespace SEAL_Application.Features.Users.Commands.VerifyEmail
             // Gửi email chứa tài khoản đăng nhập tạm thời (chỉ với tài khoản tạm)
             if (tempPassword != null)
             {
-                // Tài khoản tạm do MỜI VÀO ĐỘI tạo ra (đang có lời mời chờ) -> nội dung khác giám khảo
+
+                // Phan biet: tai khoan tam do MOI VAO DOI hay MOI VAI TRO TO CHUC (EC/Judge/Mentor)
+                // Tài khoản tạm do MỜI VÀO ĐỘI tạo ra (đang có lời mời chờ)
+
                 var isMemberInvite = await _unitOfWork.GetRepository<TeamInvitation>().AnyAsync(
                     i => i.InvitedUserId == user.Id && i.Status == TeamInvitationStatus.PendingAccept,
                     cancellationToken);
 
-                // Nút đăng nhập trỏ về trang FE /auth (KHÔNG dùng ApiBaseUrl — production không cấu hình key đó)
+                // đăng nhập trỏ về trang FE /auth, KHÔNG dùng ApiBaseUrl 
                 var loginLink = $"{_frontendUrl}/login";
                 var taiKhoanHtml = $"Email: <b>{user.Email}</b><br>Mật khẩu tạm: <b>{tempPassword}</b>";
 
