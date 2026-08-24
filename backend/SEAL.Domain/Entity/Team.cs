@@ -21,7 +21,7 @@ namespace SEAL_Domain.Entity
         /// <summary>
         /// Lý do EC/Admin từ chối duyệt đội ở lần chốt danh sách gần nhất.
         /// </summary>
-        public string? LastRejectReason { get; set; }
+        public string? LastRejectReason { get; set; }   
 
         // Navigation Properties
         public virtual Event Event { get; set; } = null!;
