@@ -81,6 +81,11 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             var student3 = await GetOrCreateUserAsync("student3_demo@yopmail.com", "Student 3 Demo", false, true, schoolId, cancellationToken, "SE333333", true, photo);
             var student4 = await GetOrCreateUserAsync("student4_demo@yopmail.com", "Student 4 Demo", false, true, schoolId, cancellationToken, "SE444444", true, photo);
 
+            // Gỡ toàn bộ vai trò cũ của tài khoản demo (tránh student1 còn đội Forming ở event khác)
+            await ClearDemoUserRolesAsync(
+                new[] { ecUser.Id, judgeUser.Id, mentorUser.Id, student1.Id, student2.Id, student3.Id, student4.Id },
+                cancellationToken);
+
             // Lấy một Template có sẵn (nếu có) + tiêu chí để seed ScoreDetail
             var template = await _unitOfWork.GetRepository<Template>().Entities.FirstOrDefaultAsync(cancellationToken);
             var templateCriteria = template == null
@@ -209,7 +214,38 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return BaseResponse<bool>.OkResponse(true,
-                "Đã tạo Nộp Bài & Chấm. Team Nộp Bài 1 trống (student1_demo); Team 2 đã chấm sẵn. Pass: 123456.");
+                $"Đã tạo Nộp Bài & Chấm (eventId={event1.Id}). Team 1 trống (student1_demo, Registered); Team 2 đã chấm sẵn. Pass: 123456.");
+        }
+
+        /// <summary>
+        /// Xóa mọi EventRole (và Score liên quan) của tài khoản demo trước khi gán lại — tránh nhầm đội Forming ở sự kiện cũ.
+        /// </summary>
+        private async Task ClearDemoUserRolesAsync(IReadOnlyCollection<string> demoUserIds, CancellationToken cancellationToken)
+        {
+            if (demoUserIds.Count == 0) return;
+
+            var demoRoles = await _unitOfWork.GetRepository<EventRole>().Entities
+                .Where(er => demoUserIds.Contains(er.UserId))
+                .ToListAsync(cancellationToken);
+            if (demoRoles.Count == 0) return;
+
+            var demoRoleIds = demoRoles.Select(r => r.Id).ToList();
+
+            var demoScores = await _unitOfWork.GetRepository<Score>().Entities
+                .Where(s => demoRoleIds.Contains(s.EventRoleId))
+                .ToListAsync(cancellationToken);
+            if (demoScores.Any())
+            {
+                var demoScoreIds = demoScores.Select(s => s.Id).ToList();
+                var demoScoreDetails = await _unitOfWork.GetRepository<ScoreDetail>().Entities
+                    .Where(sd => demoScoreIds.Contains(sd.ScoreId))
+                    .ToListAsync(cancellationToken);
+                if (demoScoreDetails.Any()) _unitOfWork.GetRepository<ScoreDetail>().DeleteRange(demoScoreDetails);
+                _unitOfWork.GetRepository<Score>().DeleteRange(demoScores);
+            }
+
+            _unitOfWork.GetRepository<EventRole>().DeleteRange(demoRoles);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
 
         private async Task<User> GetOrCreateUserAsync(string email, string fullName, bool isAdmin, bool isStudent, string schoolId, CancellationToken ct, string studentCode = null, bool isFpt = false, string photoUrl = null)
