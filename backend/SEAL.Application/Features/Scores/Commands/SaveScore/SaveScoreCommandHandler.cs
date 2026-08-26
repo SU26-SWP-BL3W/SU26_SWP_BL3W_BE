@@ -1,7 +1,9 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Features.Scores.Commands.SaveScore.Models;
+using SEAL_Application.Features.Scores;
 using SEAL_Application.Interfaces;
+using SEAL_Application.Features.Demo;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
@@ -152,8 +154,11 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
                 // 2e'. CHỈ ĐƯỢC CHẤM SAU KHI HẠNG MỤC KẾT THÚC NỘP BÀI: trong thời gian hạng mục còn mở, đội vẫn được
                 //      sửa bài (chấm sớm sẽ khóa oan quyền sửa của đội vì bài đã-có-điểm không cho sửa).
                 var scoringRound = await _unitOfWork.GetRepository<Round>().GetByIdAsync(submit.RoundId);
+                var demoEvent = await _unitOfWork.GetRepository<Event>().GetByIdAsync(track.EventId);
+                var isDemoLive = DemoEventRules.IsLiveSubmitScoreEvent(demoEvent?.EventName);
+
                 var effectiveEndDate = track.EndDate ?? scoringRound?.EndDate;
-                if (effectiveEndDate.HasValue && System.DateTime.UtcNow <= effectiveEndDate.Value)
+                if (!isDemoLive && effectiveEndDate.HasValue && System.DateTime.UtcNow <= effectiveEndDate.Value)
                 {
                     return BaseException.BadRequestInvaildInputResponse(
                         "Hạng mục chưa kết thúc nộp bài nên chưa thể chấm (đội vẫn còn quyền nộp/sửa bài).");
@@ -173,9 +178,12 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
                     return new BaseException.ForbiddenException("Đã hết hạn chấm điểm của hạng mục này.");
                 }
 
-                // 2e. Khóa chấm khi kết quả vòng đã được tính/công bố (tránh sửa điểm làm lệch kết quả đã công bố).
-                var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
-                    fr => fr.RoundId == submit.RoundId, cancellationToken);
+                // 2e. Khóa chấm khi kết quả vòng đã CÔNG BỐ (demo oral: bản nháp EC tính vẫn cho chấm tiếp).
+                var roundPublished = isDemoLive
+                    ? await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
+                        fr => fr.RoundId == submit.RoundId && fr.IsPublished, cancellationToken)
+                    : await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
+                        fr => fr.RoundId == submit.RoundId, cancellationToken);
                 if (roundPublished)
                 {
                     return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể sửa điểm chấm.");
@@ -189,6 +197,11 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
             if (templateCriterias.Count == 0)
             {
                 return BaseException.BadRequestResponse("Bộ tiêu chí của hạng mục chưa cấu hình tiêu chí nào.");
+            }
+            var weightError = ScoreScoringRules.ValidateTemplateWeights(templateCriterias);
+            if (weightError != null)
+            {
+                return weightError;
             }
             var requiredKeys = templateCriterias.Select(tc => tc.TemplateId + "|" + tc.CriteriaId).ToHashSet();
             var providedKeys = m.Details.Select(d => d.TemplateId + "|" + d.CriteriaId).ToHashSet();
@@ -216,9 +229,10 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
             {
                 var templateCriteria = templateCriterias
                     .First(tc => tc.TemplateId == item.TemplateId && tc.CriteriaId == item.CriteriaId);
-                if (item.Value > templateCriteria.MaxScore)
+                var valueError = ScoreScoringRules.ValidateValue(item.Value, templateCriteria.MaxScore);
+                if (valueError != null)
                 {
-                    return BaseException.BadRequestResponse($"Điểm chấm ({item.Value}) vượt quá điểm tối đa của tiêu chí ({templateCriteria.MaxScore}).");
+                    return valueError;
                 }
                 if (templateCriteria.MaxScore > 0m)
                 {
@@ -309,13 +323,26 @@ namespace SEAL_Application.Features.Scores.Commands.SaveScore
 
             if (m.IsSubmitted)
             {
+                bool savedOnBehalf = isCoordinator && !isOwnRole;
+                var summary = savedOnBehalf
+                    ? $"EC lưu hộ chốt phiếu chấm {score.TotalScore} cho bài {submit.Id} (vai Judge {eventRole.Id})"
+                    : $"Chốt phiếu chấm {score.TotalScore} cho bài {submit.Id}";
                 await _auditLogService.AppendAsync(
                     AuditActions.SaveScoreSubmitted,
                     AuditEntityTypes.Score,
                     score.Id,
                     eventRole.EventId,
-                    $"Chốt phiếu chấm {score.TotalScore} cho bài {submit.Id}",
-                    new { submit.TeamId, submit.TrackId, score.TotalScore },
+                    summary,
+                    new
+                    {
+                        submit.TeamId,
+                        submit.TrackId,
+                        score.TotalScore,
+                        actorUserId = currentUserId,
+                        actorIsCoordinator = savedOnBehalf,
+                        eventRoleOwnerUserId = eventRole.UserId,
+                        eventRoleId = eventRole.Id
+                    },
                     cancellationToken);
             }
 
