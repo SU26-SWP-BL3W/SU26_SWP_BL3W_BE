@@ -2,6 +2,9 @@
 
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using SEAL_Application.Commons;
 using SEAL_Application.Features.Teams.Commands.RespondTeamInvitation.Models;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
@@ -19,22 +22,53 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
     public class RespondTeamInvitationCommandHandler : IRequestHandler<RespondTeamInvitationCommand, Result<RespondTeamInvitationResponseModel>>
     {
         private const int MAX_TEAM_SIZE = 5;
+        private const string TRANSFER_NOTES = "Yêu cầu chuyển quyền Trưởng nhóm";
 
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
         private readonly INotificationService _notifications;
+        private readonly IEmailService _emailService;
+        private readonly ILogger<RespondTeamInvitationCommandHandler> _logger;
+        private readonly string _frontendUrl;
 
         public RespondTeamInvitationCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEventRoleChecker eventRoleChecker,
-            INotificationService notifications)
+            INotificationService notifications,
+            IEmailService emailService,
+            ILogger<RespondTeamInvitationCommandHandler> logger,
+            IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
             _notifications = notifications;
+            _emailService = emailService;
+            _logger = logger;
+            _frontendUrl = (configuration["FrontendUrl"] ?? "http://localhost:3000").TrimEnd('/');
+        }
+
+        private async Task SendResponseEmailAsync(string toEmail, string toName, string heading, string introHtml,
+            EmailTemplate.Callout kind, string subject, CancellationToken cancellationToken)
+        {
+            if (string.IsNullOrEmpty(toEmail)) return;
+            var body = EmailTemplate.Render(
+                heading: heading,
+                greetingName: toName,
+                introHtml: introHtml,
+                calloutLabel: kind == EmailTemplate.Callout.Success ? "Đã xác nhận" : "Đã từ chối",
+                calloutHtml: kind == EmailTemplate.Callout.Success
+                    ? "Vào mục <b>Đội thi của tôi</b> để xem chi tiết."
+                    : "Bạn vẫn giữ vai trò Trưởng nhóm — không cần làm gì thêm.",
+                calloutKind: kind,
+                ctaText: "Xem đội thi",
+                ctaUrl: $"{_frontendUrl}/my-team",
+                ctaFallbackUrl: _frontendUrl,
+                showLoginHint: false);
+            try { await _emailService.SendEmailAsync(toEmail, subject, body); }
+            catch (Exception ex) { _logger.LogWarning(ex, "Gửi email phản hồi chuyển quyền Trưởng nhóm thất bại cho {Email}", toEmail); }
         }
 
         public async Task<Result<RespondTeamInvitationResponseModel>> Handle(RespondTeamInvitationCommand request, CancellationToken cancellationToken)
@@ -77,9 +111,12 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
                 return BaseException.BadRequestInvaildInputResponse("Lời mời đã hết hạn.");
             }
 
-            // 5. DECLINE — từ chối lời mời
+            // 5. DECLINE — từ chối lời mời (mời vào đội HOẶC yêu cầu chuyển quyền Trưởng nhóm)
             if (!request.IsAccepted)
             {
+                bool wasTransfer = invitation.Status == TeamInvitationStatus.TransferPending
+                    || invitation.Notes == TRANSFER_NOTES;
+
                 invitation.Status = TeamInvitationStatus.Declined;
                 invitation.RespondedAt = now;
                 await _unitOfWork.GetRepository<TeamInvitation>().UpdateAsync(invitation);
@@ -88,19 +125,42 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
                     .Where(er => er.TeamId == invitation.TeamId && er.RoleName == EventRoleType.TeamLeader)
                     .Select(er => er.UserId)
                     .FirstOrDefaultAsync(cancellationToken);
-                var teamName = (await _unitOfWork.GetRepository<Team>().GetByIdAsync(invitation.TeamId))?.Name ?? "đội";
+                var declineTeam = await _unitOfWork.GetRepository<Team>().GetByIdAsync(invitation.TeamId);
+                var teamName = declineTeam?.Name ?? "đội";
+                var respondingUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(currentUserId);
+                var responderName = respondingUser?.FullName ?? "Một thành viên";
+
                 if (!string.IsNullOrEmpty(leaderId))
                 {
                     await _notifications.NotifyAsync(
                         leaderId,
-                        "Lời mời bị từ chối",
-                        $"Một thành viên đã từ chối lời mời vào đội {teamName}.",
+                        wasTransfer ? "Yêu cầu chuyển quyền bị từ chối" : "Lời mời bị từ chối",
+                        wasTransfer
+                            ? $"{responderName} đã từ chối lời mời chuyển quyền Trưởng nhóm đội {teamName}. Bạn vẫn là Trưởng nhóm."
+                            : $"Một thành viên đã từ chối lời mời vào đội {teamName}.",
                         "warning",
                         "/my-team",
                         cancellationToken);
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Email báo người gửi (Trưởng nhóm) CHỈ áp dụng cho yêu cầu chuyển quyền — lời mời
+                // vào đội thường vốn đã không có email báo Leader lúc bị từ chối (giữ nguyên hành vi cũ).
+                if (wasTransfer && !string.IsNullOrEmpty(leaderId))
+                {
+                    var leaderUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(leaderId);
+                    if (leaderUser != null)
+                    {
+                        await SendResponseEmailAsync(
+                            leaderUser.Email, leaderUser.FullName,
+                            "Yêu cầu chuyển quyền Trưởng nhóm bị từ chối",
+                            $"<b>{responderName}</b> đã <b>từ chối</b> lời mời chuyển quyền Trưởng nhóm đội <b>{teamName}</b>. Bạn vẫn tiếp tục là Trưởng nhóm.",
+                            EmailTemplate.Callout.Danger,
+                            $"[SEAL] Yêu cầu chuyển quyền Trưởng nhóm đội {teamName} bị từ chối",
+                            cancellationToken);
+                    }
+                }
 
                 return new RespondTeamInvitationResponseModel
                 {
@@ -163,6 +223,25 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
                 }
 
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+                // Email báo Trưởng nhóm CŨ — trước đây chỉ có thông báo chuông (NotifyAsync ở trên),
+                // chưa có email nhắc khi bên kia đã Đồng ý nhận quyền.
+                if (oldLeaderRole?.UserId != null)
+                {
+                    var oldLeaderUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(oldLeaderRole.UserId);
+                    var newLeaderUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(currentUserId);
+                    if (oldLeaderUser != null)
+                    {
+                        var newLeaderName = newLeaderUser?.FullName ?? "Thành viên được đề xuất";
+                        await SendResponseEmailAsync(
+                            oldLeaderUser.Email, oldLeaderUser.FullName,
+                            "Chuyển quyền Trưởng nhóm thành công",
+                            $"<b>{newLeaderName}</b> đã <b>đồng ý</b> nhận quyền Trưởng nhóm đội <b>{transferTeam.Name}</b>. Việc chuyển quyền đã hoàn tất.",
+                            EmailTemplate.Callout.Success,
+                            $"[SEAL] Đã chuyển quyền Trưởng nhóm đội {transferTeam.Name} thành công",
+                            cancellationToken);
+                    }
+                }
 
                 // Xoá cache phân quyền 2 người vừa đổi vai (leader mới thao tác được ngay)
                 _eventRoleChecker.InvalidateCache(currentUserId, transferTeam.EventId);

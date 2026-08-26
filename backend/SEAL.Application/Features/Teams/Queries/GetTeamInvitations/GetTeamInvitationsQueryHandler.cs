@@ -52,8 +52,11 @@ namespace SEAL_Application.Features.Teams.Queries.GetTeamInvitations
 
             return invitations.Select(i =>
             {
-                // PendingAccept nhưng đã quá hạn -> hiển thị Expired cho đúng thực tế.
-                var effectiveStatus = (i.Status == TeamInvitationStatus.PendingAccept && i.ExpiresAt < now)
+                bool isTransfer = i.Notes == "Yêu cầu chuyển quyền Trưởng nhóm";
+
+                // PendingAccept/TransferPending nhưng đã quá hạn -> hiển thị Expired cho đúng thực tế.
+                var isPending = i.Status == TeamInvitationStatus.PendingAccept || i.Status == TeamInvitationStatus.TransferPending;
+                var effectiveStatus = (isPending && i.ExpiresAt < now)
                     ? TeamInvitationStatus.Expired
                     : i.Status;
 
@@ -70,15 +73,18 @@ namespace SEAL_Application.Features.Teams.Queries.GetTeamInvitations
                     StatusLabel = effectiveStatus switch
                     {
                         TeamInvitationStatus.PendingAccept => "Đang chờ xác nhận",
-                        TeamInvitationStatus.Accepted => "Đã tham gia",
+                        TeamInvitationStatus.TransferPending => "Đang chờ xác nhận",
+                        TeamInvitationStatus.Accepted => isTransfer ? "Đã nhận quyền" : "Đã tham gia",
                         TeamInvitationStatus.Declined => "Đã từ chối",
                         TeamInvitationStatus.Expired => "Hết hạn",
+                        TeamInvitationStatus.Cancelled => "Đã hủy",
                         _ => effectiveStatus.ToString()
                     },
                     ExpiresAt = i.ExpiresAt,
                     RespondedAt = i.RespondedAt,
                     Notes = i.Notes,
-                    CreatedTime = i.CreatedTime
+                    CreatedTime = i.CreatedTime,
+                    IsTransfer = isTransfer
                 };
             }).ToList();
         }

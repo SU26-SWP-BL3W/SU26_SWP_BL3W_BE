@@ -2,6 +2,8 @@
 
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using SEAL_Application.Commons;
 using SEAL_Application.Features.Teams.Commands.ConfirmTeamRegistration.Models;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
@@ -9,6 +11,7 @@ using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
 using SEAL_Domain.Entity.Enums;
 using SEAL_Domain.Ultis;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,17 +28,23 @@ namespace SEAL_Application.Features.Teams.Commands.ConfirmTeamRegistration
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
         private readonly INotificationService _notifications;
+        private readonly IEmailService _emailService;
+        private readonly ILogger<ConfirmTeamRegistrationCommandHandler> _logger;
 
         public ConfirmTeamRegistrationCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
             IEventRoleChecker eventRoleChecker,
-            INotificationService notifications)
+            INotificationService notifications,
+            IEmailService emailService,
+            ILogger<ConfirmTeamRegistrationCommandHandler> logger)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
             _notifications = notifications;
+            _emailService = emailService;
+            _logger = logger;
         }
 
         public async Task<Result<ConfirmTeamRegistrationResponseModel>> Handle(ConfirmTeamRegistrationCommand request, CancellationToken cancellationToken)
@@ -158,6 +167,51 @@ namespace SEAL_Application.Features.Teams.Commands.ConfirmTeamRegistration
                 cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // 6. Gửi email thông báo (lỗi SMTP không chặn nghiệp vụ)
+            var eventName = eventEntity?.EventName ?? "sự kiện";
+
+            // 6a. Email cho thành viên đội
+            var memberUsers = await _unitOfWork.GetRepository<EventRole>().Entities
+                .Where(er => er.TeamId == team.Id
+                          && (er.RoleName == EventRoleType.TeamLeader || er.RoleName == EventRoleType.TeamMember))
+                .Select(er => er.User)
+                .ToListAsync(cancellationToken);
+            foreach (var m in memberUsers)
+            {
+                if (m == null || string.IsNullOrEmpty(m.Email)) continue;
+                var body = EmailTemplate.Render(
+                    heading: "Đội đã chốt đăng ký",
+                    greetingName: m.FullName,
+                    introHtml: $"Đội <b>{team.Name}</b> đã chốt danh sách đăng ký tham gia <b>{eventName}</b>.",
+                    calloutLabel: "Chờ Ban tổ chức duyệt",
+                    calloutHtml: "Đội của bạn đang chờ Ban tổ chức xét duyệt. Bạn sẽ nhận được thông báo khi có kết quả.",
+                    calloutKind: EmailTemplate.Callout.Info,
+                    showLoginHint: false);
+                try { await _emailService.SendEmailAsync(m.Email, $"[SEAL] Đội {team.Name} đã chốt đăng ký", body); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Gửi email chốt đăng ký thất bại cho {Email}", m.Email); }
+            }
+
+            // 6b. Email cho EC — báo có đội mới chờ duyệt
+            var ecUsers = await _unitOfWork.GetRepository<EventRole>().Entities
+                .Where(er => er.EventId == team.EventId && er.RoleName == EventRoleType.EventCoordinator)
+                .Select(er => er.User)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+            foreach (var ec in ecUsers)
+            {
+                if (ec == null || string.IsNullOrEmpty(ec.Email)) continue;
+                var body = EmailTemplate.Render(
+                    heading: "Đội chờ duyệt đăng ký",
+                    greetingName: ec.FullName,
+                    introHtml: $"Đội <b>{team.Name}</b> ({memberCount} thành viên) vừa chốt danh sách đăng ký <b>{eventName}</b>.",
+                    calloutLabel: "Cần xét duyệt",
+                    calloutHtml: "Vui lòng vào trang Quản lý đội để duyệt hoặc từ chối đội này.",
+                    calloutKind: EmailTemplate.Callout.Warning,
+                    showLoginHint: true);
+                try { await _emailService.SendEmailAsync(ec.Email, $"[SEAL] Đội {team.Name} chờ duyệt", body); }
+                catch (Exception ex) { _logger.LogWarning(ex, "Gửi email thông báo EC thất bại cho {Email}", ec.Email); }
+            }
 
             return new ConfirmTeamRegistrationResponseModel
             {
