@@ -27,48 +27,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             // Reset thời gian về UTC chuẩn
             var targetDate = request.TargetDate.ToUniversalTime();
 
-            // 1. Dọn event seed cũ (tên mới + các prefix cũ) để bấm lại không bị trùng/rác
-            var oldEvents = await _unitOfWork.GetRepository<Event>().Entities
-                .Where(e => e.EventName.StartsWith("Nộp Bài & Chấm -")
-                         || e.EventName.StartsWith("[DEMO LIVE] Nộp Bài")
-                         || e.EventName.StartsWith("[DEMO] Sự kiện Nộp Bài")
-                         || e.EventName.StartsWith("[DEMO] Sự kiện Chấm Điểm"))
-                .ToListAsync(cancellationToken);
-            
-            if (oldEvents.Any())
-            {
-                var oldEventIds = oldEvents.Select(e => e.Id).ToList();
-
-                // 1. Xoá Appeals (Restrict theo Team)
-                var oldAppeals = await _unitOfWork.GetRepository<Appeal>().Entities
-                    .Where(a => a.Team != null && oldEventIds.Contains(a.Team.EventId))
-                    .ToListAsync(cancellationToken);
-                if (oldAppeals.Any()) _unitOfWork.GetRepository<Appeal>().DeleteRange(oldAppeals);
-
-                // 2. Xoá FinalResults (Restrict theo Event/Team)
-                var oldFinalResults = await _unitOfWork.GetRepository<FinalResult>().Entities
-                    .Where(fr => fr.EventId != null && oldEventIds.Contains(fr.EventId))
-                    .ToListAsync(cancellationToken);
-                if (oldFinalResults.Any()) _unitOfWork.GetRepository<FinalResult>().DeleteRange(oldFinalResults);
-
-                // 3. Xoá Scores (Restrict theo EventRole)
-                var oldScores = await _unitOfWork.GetRepository<Score>().Entities
-                    .Where(s => s.EventRole != null && oldEventIds.Contains(s.EventRole.EventId))
-                    .ToListAsync(cancellationToken);
-                if (oldScores.Any()) _unitOfWork.GetRepository<Score>().DeleteRange(oldScores);
-
-                // 4. Xoá EventRoles (Restrict)
-                var oldEventRoles = await _unitOfWork.GetRepository<EventRole>().Entities
-                    .Where(er => oldEventIds.Contains(er.EventId))
-                    .ToListAsync(cancellationToken);
-                if (oldEventRoles.Any()) _unitOfWork.GetRepository<EventRole>().DeleteRange(oldEventRoles);
-
-                // Xoá Event (sẽ tự động cascade xoá Round, Track, Team, SubmitResult)
-                _unitOfWork.GetRepository<Event>().DeleteRange(oldEvents);
-                await _unitOfWork.SaveChangesAsync(cancellationToken);
-            }
-
-            // 2. Lấy hoặc tạo Users cần thiết
+            // 1. Lấy hoặc tạo tài khoản demo trước — cần userId để dọn mọi sự kiện demo cũ
             var fptSchool = await _unitOfWork.GetRepository<School>().Entities.FirstOrDefaultAsync(s => s.SchoolName == "FPT University", cancellationToken);
             var schoolId = fptSchool?.Id ?? string.Empty;
 
@@ -81,10 +40,33 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             var student3 = await GetOrCreateUserAsync("student3_demo@yopmail.com", "Student 3 Demo", false, true, schoolId, cancellationToken, "SE333333", true, photo);
             var student4 = await GetOrCreateUserAsync("student4_demo@yopmail.com", "Student 4 Demo", false, true, schoolId, cancellationToken, "SE444444", true, photo);
 
-            // Gỡ toàn bộ vai trò cũ của tài khoản demo (tránh student1 còn đội Forming ở event khác)
-            await ClearDemoUserRolesAsync(
-                new[] { ecUser.Id, judgeUser.Id, mentorUser.Id, student1.Id, student2.Id, student3.Id, student4.Id },
-                cancellationToken);
+            var demoUserIds = new[] { ecUser.Id, judgeUser.Id, mentorUser.Id, student1.Id, student2.Id, student3.Id, student4.Id };
+
+            // 2. Xóa hết sự kiện demo cũ: theo prefix tên + mọi event mà tài khoản demo còn tham gia
+            var eventIdsFromDemoUsers = await _unitOfWork.GetRepository<EventRole>().Entities
+                .Where(er => demoUserIds.Contains(er.UserId))
+                .Select(er => er.EventId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            var eventIdsFromPrefixes = await _unitOfWork.GetRepository<Event>().Entities
+                .Where(e => e.EventName.StartsWith("Nộp Bài & Chấm -")
+                         || e.EventName.StartsWith("[DEMO LIVE]")
+                         || e.EventName.StartsWith("[DEMO] Sự kiện Nộp Bài")
+                         || e.EventName.StartsWith("[DEMO] Sự kiện Chấm Điểm")
+                         || e.EventName.StartsWith("[DEMO] Sự kiện Phúc Khảo"))
+                .Select(e => e.Id)
+                .ToListAsync(cancellationToken);
+
+            var eventIdsToDelete = eventIdsFromDemoUsers
+                .Concat(eventIdsFromPrefixes)
+                .Distinct()
+                .ToList();
+
+            await DeleteEventsByIdsAsync(eventIdsToDelete, cancellationToken);
+
+            // 3. Gỡ vai trò demo còn sót trên sự kiện khác (nếu có)
+            await ClearDemoUserRolesAsync(demoUserIds, cancellationToken);
 
             // Lấy một Template có sẵn (nếu có) + tiêu chí để seed ScoreDetail
             var template = await _unitOfWork.GetRepository<Template>().Entities.FirstOrDefaultAsync(cancellationToken);
@@ -214,7 +196,57 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             return BaseResponse<bool>.OkResponse(true,
-                $"Đã tạo Nộp Bài & Chấm (eventId={event1.Id}). Team 1 trống (student1_demo, Registered); Team 2 đã chấm sẵn. Pass: 123456.");
+                $"Đã tạo Nộp Bài & Chấm (eventId={event1.Id}, trackId={track1.Id}, track=Phần mềm). " +
+                $"Judge: /judge/scoring?trackId={track1.Id} | Mentor: /mentor/teams?eventId={event1.Id}&trackId={track1.Id}. " +
+                $"Team 1 trống (student1_demo); Team 2 đã chấm sẵn. Pass: 123456.");
+        }
+
+        /// <summary>
+        /// Xóa sự kiện và dữ liệu phụ thuộc (Appeal, FinalResult, Score, EventRole) theo thứ tự FK.
+        /// Event cascade xoá Round, Track, Team, SubmitResult.
+        /// </summary>
+        private async Task DeleteEventsByIdsAsync(IReadOnlyCollection<string> eventIds, CancellationToken cancellationToken)
+        {
+            if (eventIds == null || eventIds.Count == 0) return;
+
+            var idList = eventIds.ToList();
+
+            var appeals = await _unitOfWork.GetRepository<Appeal>().Entities
+                .Where(a => a.Team != null && idList.Contains(a.Team.EventId))
+                .ToListAsync(cancellationToken);
+            if (appeals.Any()) _unitOfWork.GetRepository<Appeal>().DeleteRange(appeals);
+
+            var finalResults = await _unitOfWork.GetRepository<FinalResult>().Entities
+                .Where(fr => fr.EventId != null && idList.Contains(fr.EventId))
+                .ToListAsync(cancellationToken);
+            if (finalResults.Any()) _unitOfWork.GetRepository<FinalResult>().DeleteRange(finalResults);
+
+            var scores = await _unitOfWork.GetRepository<Score>().Entities
+                .Where(s => s.EventRole != null && idList.Contains(s.EventRole.EventId))
+                .ToListAsync(cancellationToken);
+            if (scores.Any())
+            {
+                var scoreIds = scores.Select(s => s.Id).ToList();
+                var scoreDetails = await _unitOfWork.GetRepository<ScoreDetail>().Entities
+                    .Where(sd => scoreIds.Contains(sd.ScoreId))
+                    .ToListAsync(cancellationToken);
+                if (scoreDetails.Any()) _unitOfWork.GetRepository<ScoreDetail>().DeleteRange(scoreDetails);
+                _unitOfWork.GetRepository<Score>().DeleteRange(scores);
+            }
+
+            var eventRoles = await _unitOfWork.GetRepository<EventRole>().Entities
+                .Where(er => idList.Contains(er.EventId))
+                .ToListAsync(cancellationToken);
+            if (eventRoles.Any()) _unitOfWork.GetRepository<EventRole>().DeleteRange(eventRoles);
+
+            var events = await _unitOfWork.GetRepository<Event>().Entities
+                .Where(e => idList.Contains(e.Id))
+                .ToListAsync(cancellationToken);
+            if (events.Any())
+            {
+                _unitOfWork.GetRepository<Event>().DeleteRange(events);
+                await _unitOfWork.SaveChangesAsync(cancellationToken);
+            }
         }
 
         /// <summary>
