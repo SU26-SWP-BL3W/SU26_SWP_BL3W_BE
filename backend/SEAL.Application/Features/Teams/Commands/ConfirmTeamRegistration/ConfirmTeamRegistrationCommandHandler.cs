@@ -150,7 +150,7 @@ namespace SEAL_Application.Features.Teams.Commands.ConfirmTeamRegistration
                 "Đội đã chốt đăng ký",
                 $"Đội {team.Name} đã gửi đăng ký, chờ Ban tổ chức duyệt.",
                 "info",
-                "/my-team",
+                $"/my-team?eventId={team.EventId}",
                 cancellationToken);
 
             var coordinatorIds = await _unitOfWork.GetRepository<EventRole>().Entities

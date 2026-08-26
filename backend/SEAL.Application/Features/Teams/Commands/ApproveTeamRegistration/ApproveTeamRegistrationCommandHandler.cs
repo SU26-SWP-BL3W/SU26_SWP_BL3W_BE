@@ -95,7 +95,7 @@ namespace SEAL_Application.Features.Teams.Commands.ApproveTeamRegistration
                 "Đội đã được duyệt",
                 $"Đội {team.Name} đã được duyệt, có thể nộp bài.",
                 "success",
-                "/my-team",
+                $"/my-team?eventId={team.EventId}",
                 cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
