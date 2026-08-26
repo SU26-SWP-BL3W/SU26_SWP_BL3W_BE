@@ -29,5 +29,11 @@ namespace SEAL_Application.Features.Teams.Queries.GetTeamInvitations.Models
         public DateTime? RespondedAt { get; set; }
         public string? Notes { get; set; }
         public DateTimeOffset CreatedTime { get; set; }
+
+        /// <summary>
+        /// True nếu đây là yêu cầu CHUYỂN QUYỀN Trưởng nhóm (không phải lời mời gia nhập đội
+        /// thường) — để FE tách 2 danh sách riêng thay vì tự đoán qua chuỗi Notes.
+        /// </summary>
+        public bool IsTransfer { get; set; }
     }
 }
