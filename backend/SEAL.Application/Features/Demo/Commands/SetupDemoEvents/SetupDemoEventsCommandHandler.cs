@@ -7,6 +7,7 @@ using SEAL_Domain.Entity;
 using SEAL_Domain.Entity.Enums;
 using SEAL_Domain.Ultis;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,9 +33,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             // Demo seeding config (tránh hard-code trực tiếp trong logic tạo demo)
             var targetTrackName = _configuration.GetValue<string>("DemoSeed:TargetTrackName") ?? "Phần mềm nâng cao";
 
-            // 1. Dọn dẹp Demo Events cũ (nếu có) để không bị rác khi ấn nhiều lần
+            // 1. Dọn event demo cũ (tên cũ + tên LIVE mới) để bấm lại không bị trùng/rác
             var oldEvents = await _unitOfWork.GetRepository<Event>().Entities
-                .Where(e => e.EventName.StartsWith("[DEMO] Sự kiện Nộp Bài")
+                .Where(e => e.EventName.StartsWith("[DEMO LIVE] Nộp Bài")
+                         || e.EventName.StartsWith("[DEMO] Sự kiện Nộp Bài")
                          || e.EventName.StartsWith("[DEMO] Sự kiện Chấm Điểm"))
                 .ToListAsync(cancellationToken);
             
@@ -79,21 +81,32 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             var judgeUser = await GetOrCreateUserAsync("judge_demo@yopmail.com", "Judge Demo", false, false, schoolId, cancellationToken);
             var judge2User = await GetOrCreateUserAsync("judge2_demo@yopmail.com", "Judge 2 Demo", false, false, schoolId, cancellationToken);
             var mentorUser = await GetOrCreateUserAsync("mentor_demo@yopmail.com", "Mentor Demo", false, false, schoolId, cancellationToken);
-            var student1 = await GetOrCreateUserAsync("student1_demo@yopmail.com", "Student 1 Demo", false, true, schoolId, cancellationToken, "SE111111", true, "https://s3.cloudfly.vn/rhymo-bucket/general/e188d675-d952-422f-a536-7bac6a1edc22.jpg");
-            var student2 = await GetOrCreateUserAsync("student2_demo@yopmail.com", "Student 2 Demo", false, true, schoolId, cancellationToken, "SE222222", true, "https://s3.cloudfly.vn/rhymo-bucket/general/e188d675-d952-422f-a536-7bac6a1edc22.jpg");
-            var student3 = await GetOrCreateUserAsync("student3_demo@yopmail.com", "Student 3 Demo", false, true, schoolId, cancellationToken, "SE333333", true, "https://s3.cloudfly.vn/rhymo-bucket/general/e188d675-d952-422f-a536-7bac6a1edc22.jpg");
-            var student4 = await GetOrCreateUserAsync("student4_demo@yopmail.com", "Student 4 Demo", false, true, schoolId, cancellationToken, "SE444444", true, "https://s3.cloudfly.vn/rhymo-bucket/general/e188d675-d952-422f-a536-7bac6a1edc22.jpg");
+            var photo = "https://s3.cloudfly.vn/rhymo-bucket/general/e188d675-d952-422f-a536-7bac6a1edc22.jpg";
+            var student1 = await GetOrCreateUserAsync("student1_demo@yopmail.com", "Student 1 Demo", false, true, schoolId, cancellationToken, "SE111111", true, photo);
+            var student2 = await GetOrCreateUserAsync("student2_demo@yopmail.com", "Student 2 Demo", false, true, schoolId, cancellationToken, "SE222222", true, photo);
+            var student3 = await GetOrCreateUserAsync("student3_demo@yopmail.com", "Student 3 Demo", false, true, schoolId, cancellationToken, "SE333333", true, photo);
+            var student4 = await GetOrCreateUserAsync("student4_demo@yopmail.com", "Student 4 Demo", false, true, schoolId, cancellationToken, "SE444444", true, photo);
 
-            // Lấy một Template có sẵn (nếu có)
+            // Lấy một Template có sẵn (nếu có) + tiêu chí để seed ScoreDetail
             var template = await _unitOfWork.GetRepository<Template>().Entities.FirstOrDefaultAsync(cancellationToken);
+            var templateCriteria = template == null
+                ? new List<TemplateCriteria>()
+                : await _unitOfWork.GetRepository<TemplateCriteria>().Entities
+                    .Where(tc => tc.TemplateId == template.Id)
+                    .OrderBy(tc => tc.CriteriaId)
+                    .ToListAsync(cancellationToken);
 
             // ==========================================
-            // EVENT 1: NỘP BÀI (Submission Phase)
+            // EVENT 1 [DEMO LIVE]: Nộp → Chấm → Mentor → EC tính/công bố (một sự kiện)
+            // Tên đội/account giống seed cũ: Team Nộp Bài 1–2, student1–4_demo
+            // - Team 1 trống → student1_demo nộp link live
+            // - Team 2 đã nộp + Judge chốt sẵn (để thầy thấy data)
+            // - Prefix [DEMO LIVE] để không nhầm nút/sự kiện Full 100% hay seed cũ
             // ==========================================
             var event1 = new Event
             {
-                EventName = $"[DEMO] Sự kiện Nộp Bài - {targetDate:dd/MM/yyyy}",
-                Description = "Sự kiện được thiết lập để demo việc sinh viên nộp bài thi. Đang trong khoảng thời gian nộp bài.",
+                EventName = $"[DEMO LIVE] Nộp Bài & Chấm - {targetDate:dd/MM/yyyy}",
+                Description = "LIVE: nộp link → Judge chấm bài mới → Mentor feedback → EC tính & công bố. Team 2 đã có bài+điểm sẵn.",
                 RegistrationStartDate = targetDate.AddDays(-30),
                 RegistrationEndDate = targetDate.AddDays(-20),
                 StartDate = targetDate.AddDays(-15),
@@ -111,6 +124,8 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
                 AdvancementRule = "top:10",
                 StartDate = targetDate.AddDays(-2),
                 EndDate = targetDate.AddDays(2),
+                ScoringStartDate = targetDate.AddDays(-1),
+                ScoringEndDate = targetDate.AddDays(10)
             };
             await _unitOfWork.GetRepository<Round>().AddAsync(round1);
 
@@ -119,29 +134,90 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
                 Event = event1,
                 TrackName = "Phần mềm",
                 Description = "Hạng mục dành cho các sản phẩm phần mềm, ứng dụng web/mobile.",
-                SubmissionRuleDescription = "Link github repository dự án\nLink demo",
+                SubmissionRuleDescription = "Link github repository dự án\nLink demo\nLink slide",
                 TemplateId = template?.Id,
-                StartDate = targetDate.AddDays(-2), // Bắt đầu nộp bài trước đó 2 ngày
-                EndDate = targetDate.AddDays(2),    // Kết thúc nộp bài sau 2 ngày (Đang mở nộp bài)
-                ScoringStartDate = targetDate.AddDays(2),
+                StartDate = targetDate.AddDays(-2),
+                EndDate = targetDate.AddDays(2),
+                ScoringStartDate = targetDate.AddDays(-1),
                 ScoringEndDate = targetDate.AddDays(10)
             };
             await _unitOfWork.GetRepository<Track>().AddAsync(track1);
 
-            // Team 1 — TrackId bắt buộc: CreateSubmitResult chỉ nhận đúng hạng mục đã gắn trên đội.
             var team1 = new Team { Event = event1, Name = "Team Nộp Bài 1", Status = TeamStatus.Registered, TrackId = track1.Id };
             await _unitOfWork.GetRepository<Team>().AddAsync(team1);
             await AddEventRoleAsync(student1.Id, event1.Id, team1.Id, null, EventRoleType.TeamLeader, event1.EndDate);
             await AddEventRoleAsync(student2.Id, event1.Id, team1.Id, null, EventRoleType.TeamMember, event1.EndDate);
 
-            // Team 2
             var team2 = new Team { Event = event1, Name = "Team Nộp Bài 2", Status = TeamStatus.Registered, TrackId = track1.Id };
             await _unitOfWork.GetRepository<Team>().AddAsync(team2);
             await AddEventRoleAsync(student3.Id, event1.Id, team2.Id, null, EventRoleType.TeamLeader, event1.EndDate);
             await AddEventRoleAsync(student4.Id, event1.Id, team2.Id, null, EventRoleType.TeamMember, event1.EndDate);
 
-            // Phân quyền EC cho event 1
             await AddEventRoleAsync(ecUser.Id, event1.Id, null, null, EventRoleType.EventCoordinator, event1.EndDate);
+            await AddEventRoleAsync(judgeUser.Id, event1.Id, null, track1.Id, EventRoleType.Judge, event1.EndDate);
+            await AddEventRoleAsync(mentorUser.Id, event1.Id, null, track1.Id, EventRoleType.Mentor, event1.EndDate);
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var judgeEvent1Role = await _unitOfWork.GetRepository<EventRole>().Entities
+                .FirstAsync(er => er.UserId == judgeUser.Id
+                               && er.EventId == event1.Id
+                               && er.RoleName == EventRoleType.Judge
+                               && er.TrackId == track1.Id, cancellationToken);
+
+            // Chỉ Team 2 có bài+điểm sẵn; Team 1 để trống nộp live
+            var submitReady2 = new SubmitResult
+            {
+                TeamId = team2.Id,
+                TrackId = track1.Id,
+                RoundId = round1.Id,
+                SubmissionUrl = "https://github.com/dotnet/aspnetcore",
+                RepoUrl = "https://github.com/dotnet/aspnetcore",
+                DemoUrl = "https://dotnet.microsoft.com",
+                SlideUrl = "https://docs.google.com",
+                Description = "Bài nộp Team Nộp Bài 2 (đã chấm sẵn).",
+                IsActive = true,
+                CreatedBy = student3.Id,
+                CreatedTime = targetDate.AddDays(-1)
+            };
+            await _unitOfWork.GetRepository<SubmitResult>().AddAsync(submitReady2);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            var scoreReady2 = new Score
+            {
+                EventRoleId = judgeEvent1Role.Id,
+                SubmitResultId = submitReady2.Id,
+                TotalScore = 8.50m,
+                Comment = "Điểm đã chốt cho Team Nộp Bài 2.",
+                IsSubmitted = true
+            };
+            await _unitOfWork.GetRepository<Score>().AddAsync(scoreReady2);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            if (template != null && templateCriteria.Count > 0)
+            {
+                var detailValues2 = new[] { 8.5m, 8.5m, 8.5m, 8.5m };
+                var details = new List<ScoreDetail>();
+                for (int i = 0; i < templateCriteria.Count; i++)
+                {
+                    details.Add(new ScoreDetail
+                    {
+                        ScoreId = scoreReady2.Id,
+                        TemplateId = template.Id,
+                        CriteriaId = templateCriteria[i].CriteriaId,
+                        Value = detailValues2[Math.Min(i, detailValues2.Length - 1)]
+                    });
+                }
+                await _unitOfWork.GetRepository<ScoreDetail>().AddRangeAsync(details);
+            }
+
+            await _unitOfWork.GetRepository<MentorFeedback>().AddAsync(new MentorFeedback
+            {
+                SubmitResultId = submitReady2.Id,
+                MentorId = mentorUser.Id,
+                Comment = "Kiến trúc ổn, nên bổ sung README và video demo ngắn trước vòng chấm."
+            });
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             // ==========================================
             // EVENT 2: CHẤM ĐIỂM (Scoring Phase)
@@ -241,10 +317,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             };
             await _unitOfWork.GetRepository<Track>().AddAsync(track5);
 
-            // Team 3 — gắn hạng mục đang mở chấm (track2) để list/filter theo đội khớp.
+            // Team Chấm Điểm 1 — student4 (không dùng student1; student1 chỉ Event LIVE nộp bài)
             var team3 = new Team { Event = event2, Name = "Team Chấm Điểm 1", Status = TeamStatus.Registered, TrackId = track2.Id };
             await _unitOfWork.GetRepository<Team>().AddAsync(team3);
-            await AddEventRoleAsync(student1.Id, event2.Id, team3.Id, null, EventRoleType.TeamLeader, event2.EndDate);
+            await AddEventRoleAsync(student4.Id, event2.Id, team3.Id, null, EventRoleType.TeamLeader, event2.EndDate);
             
             // Team 4
             var team4 = new Team { Event = event2, Name = "Team Chấm Điểm 2", Status = TeamStatus.Registered, TrackId = track2.Id };
@@ -273,7 +349,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
                 SlideUrl = "https://docs.google.com",
                 Description = "Bài nộp siêu cấp VIP",
                 IsActive = true,
-                CreatedBy = student1.Id,
+                CreatedBy = student4.Id,
                 CreatedTime = targetDate.AddDays(-4) // nộp trước hạn
             };
             await _unitOfWork.GetRepository<SubmitResult>().AddAsync(submit1);
@@ -296,7 +372,8 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return BaseResponse<bool>.OkResponse(true, "Đã tạo 2 sự kiện Demo thành công.");
+            return BaseResponse<bool>.OkResponse(true,
+                "Đã tạo [DEMO LIVE] Nộp Bài & Chấm + [DEMO] Sự kiện Chấm Điểm. LIVE: Team Nộp Bài 1 trống (student1_demo); Team 2 đã chấm sẵn. Pass: 123456.");
         }
 
         private async Task<User> GetOrCreateUserAsync(string email, string fullName, bool isAdmin, bool isStudent, string schoolId, CancellationToken ct, string studentCode = null, bool isFpt = false, string photoUrl = null)
