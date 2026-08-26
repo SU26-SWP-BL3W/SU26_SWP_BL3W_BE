@@ -97,7 +97,7 @@ namespace SEAL_Application.Features.Teams.Commands.RejectTeamRegistration
                 "Đội bị từ chối duyệt",
                 $"Đội {team.Name} bị từ chối: {request.Reason}",
                 "danger",
-                "/my-team",
+                $"/my-team?eventId={team.EventId}",
                 cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);

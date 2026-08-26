@@ -51,7 +51,7 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
         }
 
         private async Task SendResponseEmailAsync(string toEmail, string toName, string heading, string introHtml,
-            EmailTemplate.Callout kind, string subject, CancellationToken cancellationToken)
+            EmailTemplate.Callout kind, string subject, string eventId, CancellationToken cancellationToken)
         {
             if (string.IsNullOrEmpty(toEmail)) return;
             var body = EmailTemplate.Render(
@@ -64,7 +64,9 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
                     : "Bạn vẫn giữ vai trò Trưởng nhóm — không cần làm gì thêm.",
                 calloutKind: kind,
                 ctaText: "Xem đội thi",
-                ctaUrl: $"{_frontendUrl}/my-team",
+                // Kèm eventId — người nhận có thể đang là Trưởng/Thành viên đội khác ở sự kiện khác,
+                // /my-team không kèm eventId sẽ hiện nhầm đội đó thay vì đúng đội trong email này.
+                ctaUrl: $"{_frontendUrl}/my-team?eventId={eventId}",
                 ctaFallbackUrl: _frontendUrl,
                 showLoginHint: false);
             try { await _emailService.SendEmailAsync(toEmail, subject, body); }
@@ -139,7 +141,7 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
                             ? $"{responderName} đã từ chối lời mời chuyển quyền Trưởng nhóm đội {teamName}. Bạn vẫn là Trưởng nhóm."
                             : $"Một thành viên đã từ chối lời mời vào đội {teamName}.",
                         "warning",
-                        "/my-team",
+                        $"/my-team?eventId={declineTeam?.EventId}",
                         cancellationToken);
                 }
 
@@ -158,6 +160,7 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
                             $"<b>{responderName}</b> đã <b>từ chối</b> lời mời chuyển quyền Trưởng nhóm đội <b>{teamName}</b>. Bạn vẫn tiếp tục là Trưởng nhóm.",
                             EmailTemplate.Callout.Danger,
                             $"[SEAL] Yêu cầu chuyển quyền Trưởng nhóm đội {teamName} bị từ chối",
+                            declineTeam?.EventId ?? "",
                             cancellationToken);
                     }
                 }
@@ -218,7 +221,7 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
                         "Đã chuyển quyền Trưởng nhóm",
                         $"Bạn đã chuyển quyền Trưởng nhóm {transferTeam.Name} thành công.",
                         "info",
-                        "/my-team",
+                        $"/my-team?eventId={transferTeam.EventId}",
                         cancellationToken);
                 }
 
@@ -239,6 +242,7 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
                             $"<b>{newLeaderName}</b> đã <b>đồng ý</b> nhận quyền Trưởng nhóm đội <b>{transferTeam.Name}</b>. Việc chuyển quyền đã hoàn tất.",
                             EmailTemplate.Callout.Success,
                             $"[SEAL] Đã chuyển quyền Trưởng nhóm đội {transferTeam.Name} thành công",
+                            transferTeam.EventId,
                             cancellationToken);
                     }
                 }
@@ -376,7 +380,7 @@ namespace SEAL_Application.Features.Teams.Commands.RespondTeamInvitation
                     "Thành viên đã tham gia",
                     $"Một thành viên đã đồng ý vào đội {acceptTeam?.Name ?? ""}.",
                     "success",
-                    "/my-team",
+                    $"/my-team?eventId={acceptTeam?.EventId}",
                     cancellationToken);
                 await _unitOfWork.SaveChangesAsync(cancellationToken);
             }

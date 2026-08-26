@@ -309,8 +309,10 @@ namespace SEAL_Application.Features.Teams.Commands.InviteTeamMember
 
             // C — Email đã có tài khoản thật (đã kích hoạt)
 
-            // Gửi email mời tham gia đội (đã có tài khoản)
-            var teamLink = $"{frontendUrl}/my-team";
+            // Gửi email mời tham gia đội (đã có tài khoản) — trỏ về /my-invitations (chưa vào đội
+            // nên chưa có gì để xem ở /my-team; nếu user đã là Trưởng/Thành viên đội khác ở sự kiện
+            // khác, /my-team không kèm eventId sẽ hiện nhầm đội đó thay vì lời mời cần phản hồi).
+            var teamLink = $"{frontendUrl}/my-invitations";
             var userEmailBody = EmailTemplate.Render(
                 heading: "Lời mời tham gia đội",
                 greetingName: invitedUser.FullName,
