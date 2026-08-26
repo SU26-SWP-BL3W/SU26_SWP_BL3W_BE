@@ -1,4 +1,5 @@
 using MediatR;
+using SEAL_Application.Features.Demo;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
@@ -97,9 +98,13 @@ namespace SEAL_Application.Features.Scores.Commands.CreateScore
             var track = await _unitOfWork.GetRepository<Track>().GetByIdAsync(submit.TrackId);
             var round = await _unitOfWork.GetRepository<Round>().GetByIdAsync(submit.RoundId);
             var now = System.DateTime.UtcNow;
+            var demoEvent = track != null
+                ? await _unitOfWork.GetRepository<Event>().GetByIdAsync(track.EventId)
+                : null;
+            var isDemoLive = DemoEventRules.IsLiveSubmitScoreEvent(demoEvent?.EventName);
 
             var effectiveEndDate = track?.EndDate ?? round?.EndDate;
-            if (effectiveEndDate.HasValue && now <= effectiveEndDate.Value)
+            if (!isDemoLive && effectiveEndDate.HasValue && now <= effectiveEndDate.Value)
             {
                 return BaseException.BadRequestInvaildInputResponse(
                     "Hạng mục chưa kết thúc nộp bài nên chưa thể chấm (đội vẫn còn quyền nộp/sửa bài).");
@@ -116,8 +121,11 @@ namespace SEAL_Application.Features.Scores.Commands.CreateScore
                 return new BaseException.ForbiddenException("Đã hết hạn chấm điểm của hạng mục này.");
             }
 
-            var roundPublished = await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
-                fr => fr.RoundId == submit.RoundId, cancellationToken);
+            var roundPublished = isDemoLive
+                ? await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
+                    fr => fr.RoundId == submit.RoundId && fr.IsPublished, cancellationToken)
+                : await _unitOfWork.GetRepository<FinalResult>().AnyAsync(
+                    fr => fr.RoundId == submit.RoundId, cancellationToken);
             if (roundPublished)
             {
                 return new BaseException.ForbiddenException("Kết quả vòng thi đã được tính/công bố nên không thể tạo phiếu chấm.");
