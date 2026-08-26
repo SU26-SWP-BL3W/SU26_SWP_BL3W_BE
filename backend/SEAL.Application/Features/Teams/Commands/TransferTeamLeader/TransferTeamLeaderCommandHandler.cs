@@ -5,6 +5,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using SEAL_Application.Commons;
 using SEAL_Application.Interfaces;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
@@ -19,6 +22,9 @@ namespace SEAL_Application.Features.Teams.Commands.TransferTeamLeader
         private readonly IUnitOfWork _unitOfWork;
         private readonly ICurrentUserService _currentUserService;
         private readonly IEventRoleChecker _eventRoleChecker;
+        private readonly IEmailService _emailService;
+        private readonly ILogger<TransferTeamLeaderCommandHandler> _logger;
+        private readonly string _frontendUrl;
 
         // Yêu cầu chuyển quyền chờ chấp nhận trong 24 giờ.
         private static readonly TimeSpan TransferLifetime = TimeSpan.FromHours(24);
@@ -26,11 +32,17 @@ namespace SEAL_Application.Features.Teams.Commands.TransferTeamLeader
         public TransferTeamLeaderCommandHandler(
             IUnitOfWork unitOfWork,
             ICurrentUserService currentUserService,
-            IEventRoleChecker eventRoleChecker)
+            IEventRoleChecker eventRoleChecker,
+            IEmailService emailService,
+            ILogger<TransferTeamLeaderCommandHandler> logger,
+            IConfiguration configuration)
         {
             _unitOfWork = unitOfWork;
             _currentUserService = currentUserService;
             _eventRoleChecker = eventRoleChecker;
+            _emailService = emailService;
+            _logger = logger;
+            _frontendUrl = (configuration["FrontendUrl"] ?? "http://localhost:3000").TrimEnd('/');
         }
 
         public async Task<Result<bool>> Handle(TransferTeamLeaderCommand request, CancellationToken cancellationToken)
@@ -120,6 +132,36 @@ namespace SEAL_Application.Features.Teams.Commands.TransferTeamLeader
             });
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            // 7. Gửi email cho người được đề xuất — trước đây chỉ hiện qua chuông thông báo (chuông thực
+            // chất là danh sách TeamInvitation đang PendingAccept/TransferPending, không cần NotifyAsync
+            // riêng), CHƯA có email nhắc. Không chặn nghiệp vụ chính nếu gửi lỗi (đã SaveChanges ở trên rồi).
+            var targetUser = await _unitOfWork.GetRepository<User>().GetByIdAsync(request.NewLeaderUserId);
+            if (targetUser != null && !string.IsNullOrEmpty(targetUser.Email))
+            {
+                var currentLeaderName = currentUser?.FullName ?? "Trưởng nhóm hiện tại";
+                var myInvitationsLink = $"{_frontendUrl}/my-invitations";
+                var body = EmailTemplate.Render(
+                    heading: "Yêu cầu chuyển quyền Trưởng nhóm",
+                    greetingName: targetUser.FullName,
+                    introHtml: $"<b>{currentLeaderName}</b> muốn chuyển quyền <b>Trưởng nhóm</b> đội <b>{team.Name}</b> cho bạn.",
+                    calloutLabel: "Bạn cần làm gì",
+                    calloutHtml: "Vào mục <b>Lời mời của tôi</b> và bấm <b>Đồng ý</b> nếu chấp nhận làm Trưởng nhóm mới, hoặc <b>Từ chối</b> nếu không muốn nhận vai trò này.",
+                    calloutKind: EmailTemplate.Callout.Info,
+                    ctaText: "Xem lời mời",
+                    ctaUrl: myInvitationsLink,
+                    ctaFallbackUrl: _frontendUrl,
+                    noteHtml: $"Yêu cầu sẽ hết hạn sau {TransferLifetime.TotalHours:0} giờ nếu không phản hồi.",
+                    showLoginHint: false);
+                try
+                {
+                    await _emailService.SendEmailAsync(targetUser.Email, $"[SEAL] Yêu cầu chuyển quyền Trưởng nhóm đội {team.Name}", body);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Gửi email yêu cầu chuyển quyền Trưởng nhóm thất bại cho {Email}", targetUser.Email);
+                }
+            }
 
             return true;
         }
