@@ -253,6 +253,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
                 TeamId = teamId,
                 TrackId = trackId,
                 RoleName = roleName,
+                AssignedAt = DateTime.UtcNow,
                 ExpiredAt = expiredAt
             };
             await _unitOfWork.GetRepository<EventRole>().AddAsync(role);
