@@ -47,6 +47,16 @@ namespace SEAL_Application.Features.Users.Queries.GetMyInvitations
             _ => STATUS_PENDING
         };
 
+        /// <summary>Chuẩn hóa trạng thái lời mời đội (join lẫn chuyển quyền) về chuỗi FE dùng.</summary>
+        private static string MapTeamStatus(TeamInvitationStatus s) => s switch
+        {
+            TeamInvitationStatus.Accepted => "Accepted",
+            TeamInvitationStatus.Declined => "Declined",
+            TeamInvitationStatus.Expired => "Expired",
+            TeamInvitationStatus.Cancelled => "Cancelled",
+            _ => STATUS_PENDING
+        };
+
         public async Task<Result<MyInvitationsResponseModel>> Handle(GetMyInvitationsQuery request, CancellationToken cancellationToken)
         {
             var currentUserId = _currentUserService.UserId;
@@ -66,6 +76,22 @@ namespace SEAL_Application.Features.Users.Queries.GetMyInvitations
                          && (i.Status == TeamInvitationStatus.PendingAccept
                           || i.Status == TeamInvitationStatus.TransferPending)
                          && i.ExpiresAt > now)
+                .ToListAsync(cancellationToken);
+
+            // 1b. Lời mời vào đội (join lẫn chuyển quyền Trưởng nhóm) ĐÃ phản hồi/hết hạn/bị hủy gần đây
+            //     (trong HISTORY_DAYS ngày) — làm thông báo lịch sử, cùng cách EventRoleInvitation đã làm
+            //     ở dưới (mục 3). Trước đây chỉ có EventRoleInvitation có lịch sử, TeamInvitation thì không.
+            var respondedTeamInvites = await _unitOfWork.GetRepository<TeamInvitation>().GetQueryable()
+                .AsNoTracking()
+                .Include(i => i.Team)
+                .Where(i => i.InvitedUserId == currentUserId
+                         && (i.Status == TeamInvitationStatus.Accepted
+                          || i.Status == TeamInvitationStatus.Declined
+                          || i.Status == TeamInvitationStatus.Expired
+                          || i.Status == TeamInvitationStatus.Cancelled)
+                         && i.RespondedAt != null
+                         && i.RespondedAt >= historyCutoff)
+                .OrderByDescending(i => i.RespondedAt)
                 .ToListAsync(cancellationToken);
 
             // 2. Lời mời vai trò sự kiện đang chờ và còn hiệu lực
@@ -93,7 +119,9 @@ namespace SEAL_Application.Features.Users.Queries.GetMyInvitations
                 .ToListAsync(cancellationToken);
 
             // 4. Tra cứu tên người gửi mời cho TeamInvitation (bảng này không có navigation tới người mời)
-            var teamInviterIds = teamInvites.Select(t => t.InvitedByUserId).Distinct().ToList();
+            var teamInviterIds = teamInvites.Select(t => t.InvitedByUserId)
+                .Concat(respondedTeamInvites.Select(t => t.InvitedByUserId))
+                .Distinct().ToList();
             var inviterNames = teamInviterIds.Count == 0
                 ? new Dictionary<string, string>()
                 : await _unitOfWork.GetRepository<User>().GetQueryable()
@@ -120,6 +148,22 @@ namespace SEAL_Application.Features.Users.Queries.GetMyInvitations
                     Role = isTransfer ? TEAM_LEADER_ROLE_LABEL : TEAM_MEMBER_ROLE_LABEL,
                     Status = STATUS_PENDING,
                     RespondedAt = null,
+                    ExpiresAt = t.ExpiresAt
+                });
+            }
+
+            foreach (var t in respondedTeamInvites)
+            {
+                bool isTransfer = t.Notes == "Yêu cầu chuyển quyền Trưởng nhóm";
+                history.Add(new InvitationItemModel
+                {
+                    InvitationId = t.Id,
+                    Type = TYPE_TEAM,
+                    TargetName = t.Team?.Name ?? string.Empty,
+                    InviterName = inviterNames.TryGetValue(t.InvitedByUserId, out var respName) ? respName : string.Empty,
+                    Role = isTransfer ? TEAM_LEADER_ROLE_LABEL : TEAM_MEMBER_ROLE_LABEL,
+                    Status = MapTeamStatus(t.Status),      // Accepted | Declined | Expired | Cancelled
+                    RespondedAt = t.RespondedAt,
                     ExpiresAt = t.ExpiresAt
                 });
             }
