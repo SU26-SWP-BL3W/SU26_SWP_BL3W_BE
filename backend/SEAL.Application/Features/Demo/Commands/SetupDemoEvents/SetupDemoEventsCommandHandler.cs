@@ -1,6 +1,5 @@
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using SEAL_Domain.Base;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Entity;
@@ -17,12 +16,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
     public class SetupDemoEventsCommandHandler : IRequestHandler<SetupDemoEventsCommand, Result<BaseResponse<bool>>>
     {
         private readonly IUnitOfWork _unitOfWork;
-        private readonly IConfiguration _configuration;
 
-        public SetupDemoEventsCommandHandler(IUnitOfWork unitOfWork, IConfiguration configuration)
+        public SetupDemoEventsCommandHandler(IUnitOfWork unitOfWork)
         {
             _unitOfWork = unitOfWork;
-            _configuration = configuration;
         }
 
         public async Task<Result<BaseResponse<bool>>> Handle(SetupDemoEventsCommand request, CancellationToken cancellationToken)
@@ -30,12 +27,10 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             // Reset thời gian về UTC chuẩn
             var targetDate = request.TargetDate.ToUniversalTime();
 
-            // Demo seeding config (tránh hard-code trực tiếp trong logic tạo demo)
-            var targetTrackName = _configuration.GetValue<string>("DemoSeed:TargetTrackName") ?? "Phần mềm nâng cao";
-
-            // 1. Dọn event demo cũ (tên cũ + tên LIVE mới) để bấm lại không bị trùng/rác
+            // 1. Dọn event seed cũ (tên mới + các prefix cũ) để bấm lại không bị trùng/rác
             var oldEvents = await _unitOfWork.GetRepository<Event>().Entities
-                .Where(e => e.EventName.StartsWith("[DEMO LIVE] Nộp Bài")
+                .Where(e => e.EventName.StartsWith("Nộp Bài & Chấm -")
+                         || e.EventName.StartsWith("[DEMO LIVE] Nộp Bài")
                          || e.EventName.StartsWith("[DEMO] Sự kiện Nộp Bài")
                          || e.EventName.StartsWith("[DEMO] Sự kiện Chấm Điểm"))
                 .ToListAsync(cancellationToken);
@@ -79,7 +74,6 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
 
             var ecUser = await GetOrCreateUserAsync("ec_demo@yopmail.com", "EC Demo", false, false, schoolId, cancellationToken);
             var judgeUser = await GetOrCreateUserAsync("judge_demo@yopmail.com", "Judge Demo", false, false, schoolId, cancellationToken);
-            var judge2User = await GetOrCreateUserAsync("judge2_demo@yopmail.com", "Judge 2 Demo", false, false, schoolId, cancellationToken);
             var mentorUser = await GetOrCreateUserAsync("mentor_demo@yopmail.com", "Mentor Demo", false, false, schoolId, cancellationToken);
             var photo = "https://s3.cloudfly.vn/rhymo-bucket/general/e188d675-d952-422f-a536-7bac6a1edc22.jpg";
             var student1 = await GetOrCreateUserAsync("student1_demo@yopmail.com", "Student 1 Demo", false, true, schoolId, cancellationToken, "SE111111", true, photo);
@@ -96,17 +90,12 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
                     .OrderBy(tc => tc.CriteriaId)
                     .ToListAsync(cancellationToken);
 
-            // ==========================================
-            // EVENT 1 [DEMO LIVE]: Nộp → Chấm → Mentor → EC tính/công bố (một sự kiện)
-            // Tên đội/account giống seed cũ: Team Nộp Bài 1–2, student1–4_demo
-            // - Team 1 trống → student1_demo nộp link live
-            // - Team 2 đã nộp + Judge chốt sẵn (để thầy thấy data)
-            // - Prefix [DEMO LIVE] để không nhầm nút/sự kiện Full 100% hay seed cũ
-            // ==========================================
+            // Một sự kiện: Nộp → Chấm → Mentor → EC tính/công bố
+            // Team 1 trống (student1 nộp); Team 2 đã nộp + chấm sẵn
             var event1 = new Event
             {
-                EventName = $"[DEMO LIVE] Nộp Bài & Chấm - {targetDate:dd/MM/yyyy}",
-                Description = "LIVE: nộp link → Judge chấm bài mới → Mentor feedback → EC tính & công bố. Team 2 đã có bài+điểm sẵn.",
+                EventName = $"Nộp Bài & Chấm - {targetDate:dd/MM/yyyy}",
+                Description = "Nộp link → Judge chấm bài mới → Mentor feedback → EC tính & công bố. Team 2 đã có bài+điểm sẵn.",
                 RegistrationStartDate = targetDate.AddDays(-30),
                 RegistrationEndDate = targetDate.AddDays(-20),
                 StartDate = targetDate.AddDays(-15),
@@ -165,7 +154,7 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
                                && er.RoleName == EventRoleType.Judge
                                && er.TrackId == track1.Id, cancellationToken);
 
-            // Chỉ Team 2 có bài+điểm sẵn; Team 1 để trống nộp live
+            // Chỉ Team 2 có bài+điểm sẵn; Team 1 để trống nộp
             var submitReady2 = new SubmitResult
             {
                 TeamId = team2.Id,
@@ -219,161 +208,8 @@ namespace SEAL_Application.Features.Demo.Commands.SetupDemoEvents
             });
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            // ==========================================
-            // EVENT 2: CHẤM ĐIỂM (Scoring Phase)
-            // ==========================================
-            var event2 = new Event
-            {
-                EventName = $"[DEMO] Sự kiện Chấm Điểm - {targetDate:dd/MM/yyyy}",
-                Description = "Sự kiện được thiết lập để demo việc giám khảo chấm bài. Đã kết thúc nộp bài và đang trong khoảng thời gian chấm điểm.",
-                RegistrationStartDate = targetDate.AddDays(-45),
-                RegistrationEndDate = targetDate.AddDays(-35),
-                StartDate = targetDate.AddDays(-30),
-                EndDate = targetDate.AddDays(15),
-                Status = true,
-                Year = targetDate.Year
-            };
-            await _unitOfWork.GetRepository<Event>().AddAsync(event2);
-
-            var round2 = new Round
-            {
-                Event = event2,
-                RoundName = "Vòng đánh giá",
-                RoundNumber = 1,
-                AdvancementRule = "percent:50",
-                StartDate = targetDate.AddDays(-25),
-                EndDate = targetDate.AddDays(-3),
-                ScoringStartDate = targetDate.AddDays(-2),
-                ScoringEndDate = targetDate.AddDays(5)
-            };
-            await _unitOfWork.GetRepository<Round>().AddAsync(round2);
-
-            var round3 = new Round
-            {
-                Event = event2,
-                RoundName = "Vòng chung kết",
-                RoundNumber = 2,
-                AdvancementRule = "top:1",
-                StartDate = targetDate.AddDays(11),
-                EndDate = targetDate.AddDays(20),
-                ScoringStartDate = targetDate.AddDays(15),
-                ScoringEndDate = targetDate.AddDays(19)
-            };
-            await _unitOfWork.GetRepository<Round>().AddAsync(round3);
-
-            var track2 = new Track
-            {
-                Event = event2,
-                TrackName = "Thiết kế",
-                Description = "Hạng mục dành cho các sản phẩm thiết kế đồ họa, UI/UX.",
-                SubmissionRuleDescription = "Link demo\nLink báo cáo/slide",
-                TemplateId = template?.Id,
-                StartDate = targetDate.AddDays(-10), // Bắt đầu nộp bài
-                EndDate = targetDate.AddDays(-3),    // ĐÃ HẾT HẠN NỘP BÀI
-                ScoringStartDate = targetDate.AddDays(-2), // Bắt đầu chấm điểm
-                ScoringEndDate = targetDate.AddDays(5)     // ĐANG TRONG THỜI GIAN CHẤM ĐIỂM
-            };
-            await _unitOfWork.GetRepository<Track>().AddAsync(track2);
-
-            var track3 = new Track
-            {
-                Event = event2,
-                TrackName = "Phần mềm",
-                Description = "Hạng mục dành cho các sản phẩm phần mềm, ứng dụng web/mobile.",
-                SubmissionRuleDescription = "Link github repository dự án\nLink demo",
-                TemplateId = template?.Id,
-                StartDate = targetDate.AddDays(-10), // Bắt đầu nộp bài
-                EndDate = targetDate.AddDays(-3),    // ĐÃ HẾT HẠN NỘP BÀI
-                ScoringStartDate = targetDate.AddDays(-2), // Bắt đầu chấm điểm
-                ScoringEndDate = targetDate.AddDays(5)     // ĐANG TRONG THỜI GIAN CHẤM ĐIỂM
-            };
-            await _unitOfWork.GetRepository<Track>().AddAsync(track3);
-
-            var track4 = new Track
-            {
-                Event = event2,
-                TrackName = "Thiết kế mở rộng",
-                Description = "Hạng mục mở rộng dành cho các sản phẩm thiết kế đồ họa, UI/UX.",
-                SubmissionRuleDescription = "Link demo\nLink báo cáo/slide",
-                TemplateId = template?.Id,
-                StartDate = targetDate.AddDays(11), 
-                EndDate = targetDate.AddDays(14),    
-                ScoringStartDate = targetDate.AddDays(15), 
-                ScoringEndDate = targetDate.AddDays(19)     
-            };
-            await _unitOfWork.GetRepository<Track>().AddAsync(track4);
-
-            var track5 = new Track
-            {
-                Event = event2,
-                TrackName = targetTrackName,
-                Description = "Hạng mục dành cho các sản phẩm phần mềm, ứng dụng web/mobile (Vòng Chung kết).",
-                SubmissionRuleDescription = "Link github repository dự án\nLink demo",
-                TemplateId = template?.Id,
-                StartDate = targetDate.AddDays(11), 
-                EndDate = targetDate.AddDays(14),    
-                ScoringStartDate = targetDate.AddDays(15), 
-                ScoringEndDate = targetDate.AddDays(19)     
-            };
-            await _unitOfWork.GetRepository<Track>().AddAsync(track5);
-
-            // Team Chấm Điểm 1 — student4 (không dùng student1; student1 chỉ Event LIVE nộp bài)
-            var team3 = new Team { Event = event2, Name = "Team Chấm Điểm 1", Status = TeamStatus.Registered, TrackId = track2.Id };
-            await _unitOfWork.GetRepository<Team>().AddAsync(team3);
-            await AddEventRoleAsync(student4.Id, event2.Id, team3.Id, null, EventRoleType.TeamLeader, event2.EndDate);
-            
-            // Team 4
-            var team4 = new Team { Event = event2, Name = "Team Chấm Điểm 2", Status = TeamStatus.Registered, TrackId = track2.Id };
-            await _unitOfWork.GetRepository<Team>().AddAsync(team4);
-            await AddEventRoleAsync(student3.Id, event2.Id, team4.Id, null, EventRoleType.TeamLeader, event2.EndDate);
-
-            // Phân quyền EC cho event 2
-            await AddEventRoleAsync(ecUser.Id, event2.Id, null, null, EventRoleType.EventCoordinator, event2.EndDate);
-
-            // 2 GK cùng track Thiết kế (trung bình phiếu) + Mentor cùng track đang chấm.
-            await AddEventRoleAsync(judgeUser.Id, event2.Id, null, track2.Id, EventRoleType.Judge, event2.EndDate);
-            await AddEventRoleAsync(judge2User.Id, event2.Id, null, track2.Id, EventRoleType.Judge, event2.EndDate);
-            await AddEventRoleAsync(mentorUser.Id, event2.Id, null, track2.Id, EventRoleType.Mentor, event2.EndDate);
-
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-            // Thêm bài nộp (SubmitResult) cho các Team ở Event 2
-            var submit1 = new SubmitResult
-            {
-                TeamId = team3.Id,
-                TrackId = track2.Id,
-                RoundId = round2.Id,
-                SubmissionUrl = "https://github.com/dotnet/runtime",
-                RepoUrl = "https://github.com/dotnet/runtime",
-                DemoUrl = "https://dotnet.microsoft.com",
-                SlideUrl = "https://docs.google.com",
-                Description = "Bài nộp siêu cấp VIP",
-                IsActive = true,
-                CreatedBy = student4.Id,
-                CreatedTime = targetDate.AddDays(-4) // nộp trước hạn
-            };
-            await _unitOfWork.GetRepository<SubmitResult>().AddAsync(submit1);
-
-            var submit2 = new SubmitResult
-            {
-                TeamId = team4.Id,
-                TrackId = track2.Id,
-                RoundId = round2.Id,
-                SubmissionUrl = "https://github.com/microsoft/TypeScript",
-                RepoUrl = "https://github.com/microsoft/TypeScript",
-                DemoUrl = "https://www.typescriptlang.org",
-                SlideUrl = "https://docs.google.com",
-                Description = "Bài nộp cực kì xuất sắc",
-                IsActive = true,
-                CreatedBy = student3.Id,
-                CreatedTime = targetDate.AddDays(-5) // nộp trước hạn
-            };
-            await _unitOfWork.GetRepository<SubmitResult>().AddAsync(submit2);
-
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-
             return BaseResponse<bool>.OkResponse(true,
-                "Đã tạo [DEMO LIVE] Nộp Bài & Chấm + [DEMO] Sự kiện Chấm Điểm. LIVE: Team Nộp Bài 1 trống (student1_demo); Team 2 đã chấm sẵn. Pass: 123456.");
+                "Đã tạo Nộp Bài & Chấm. Team Nộp Bài 1 trống (student1_demo); Team 2 đã chấm sẵn. Pass: 123456.");
         }
 
         private async Task<User> GetOrCreateUserAsync(string email, string fullName, bool isAdmin, bool isStudent, string schoolId, CancellationToken ct, string studentCode = null, bool isFpt = false, string photoUrl = null)
