@@ -4,6 +4,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using SEAL_Application.Features.FinalResults.Commands.CalculateRoundResults.Models;
 using SEAL_Application.Interfaces;
+using SEAL_Application.Features.Demo;
 using SEAL_Application.Services.UnitOfWork;
 using SEAL_Domain.Base;
 using SEAL_Domain.Entity;
@@ -35,7 +36,10 @@ namespace SEAL_Application.Features.FinalResults.Commands.CalculateRoundResults
                 return BaseException.BadRequestNotFoundResponse($"Vòng thi có ID '{request.RoundId}' không tồn tại.");
             }
 
-            if (System.DateTime.UtcNow <= round.EndDate)
+            var roundEvent = await _unitOfWork.GetRepository<Event>().GetByIdAsync(round.EventId);
+            var isDemoLive = DemoEventRules.IsLiveSubmitScoreEvent(roundEvent?.EventName);
+
+            if (!isDemoLive && System.DateTime.UtcNow <= round.EndDate)
             {
                 return BaseException.BadRequestInvaildInputResponse(
                     "Vòng thi chưa kết thúc (chưa hết hạn nộp/chấm bài) nên chưa thể tính kết quả.");

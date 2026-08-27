@@ -44,7 +44,9 @@ namespace SEAL_Application.Features.Teams.Queries.GetMyTeam
                 userRoleQuery = userRoleQuery.Where(er => er.EventId == request.EventId);
             }
 
-            var userRole = await userRoleQuery.FirstOrDefaultAsync(cancellationToken);
+            var userRole = await userRoleQuery
+                .OrderByDescending(er => er.AssignedAt ?? er.CreatedTime.UtcDateTime)
+                .FirstOrDefaultAsync(cancellationToken);
 
             if (userRole == null)
             {
